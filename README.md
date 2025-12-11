@@ -11,9 +11,9 @@ We introduce a novel recipe for building an ultra-fast diffusion language model 
 
 ## 📣 News
 
-- `[2025/12/11]`: We release the [blog](https://hao-ai-lab.github.io/blogs/text-diffusion/).
-- `[2025/12/10]`: We release the training scripts, training datasets, and evaluation code for d3LLM, see [our GitHub repo](https://github.com/hao-ai-lab/d3LLM).
-- `[2025/12/10]`: We release the models on Huggingface 🤗, see our [d3LLM-LLaDA](https://huggingface.co/d3LLM/d3LLM_LLaDA), [d3LLM-Dream](https://huggingface.co/d3LLM/d3LLM_Dream), and [d3LLM-Dream-Coder](https://huggingface.co/d3LLM/d3LLM_Dream_Coder).
+- `[2025/12/11]`: We release the models on Huggingface 🤗, see our [d3LLM-LLaDA](https://huggingface.co/d3LLM/d3LLM_LLaDA), [d3LLM-Dream](https://huggingface.co/d3LLM/d3LLM_Dream), and [d3LLM-Dream-Coder](https://huggingface.co/d3LLM/d3LLM_Dream_Coder).
+- `[2025/12/11]`: We release the training scripts, training datasets, and evaluation code for d3LLM, see [our GitHub repo](https://github.com/hao-ai-lab/d3LLM).
+- `[2025/12/10]`: We release the 🌐 [blog](https://hao-ai-lab.github.io/blogs/text-diffusion/).
 
 ## ✨ Demo
 
