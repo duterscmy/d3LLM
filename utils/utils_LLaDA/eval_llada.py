@@ -686,10 +686,11 @@ class LLaDAEvalHarness(LM):
 
             if self.is_instruct and 'task_id' in req.doc and str(req.doc['task_id']).lower().startswith('humaneval'):
                 original_answer = self.tokenizer.decode(generated_answer[0][input_ids.shape[1]:], skip_special_tokens=True)
+                generated_answer_ids = torch.tensor(self.tokenizer(original_answer)["input_ids"])
                 if self.show_speed and i >= warmup_steps:
                     tokens_before_until = self.tokenizer(original_answer, add_special_tokens=False)['input_ids']
                     num_tokens_before_until += len([t for t in tokens_before_until if t != 126081])
-                    num_tokens += (generated_answer != 126081).sum()
+                    num_tokens += (generated_answer_ids != 126081).sum()
                     num_nfe += nfe
                 generated_answer = original_answer
             else:

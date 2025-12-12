@@ -17,6 +17,10 @@ FONT_SIZES = {
     'data_dream_coder': (26, 24, 22, 18, 21, 19, 17),
 }
 
+# Create output directory for figures
+import os
+os.makedirs('figs', exist_ok=True)
+
 for DATA_PATH in DATA_PATHS:
     print(f"\n{'='*60}\nProcessing {DATA_PATH}\n{'='*60}")
     
