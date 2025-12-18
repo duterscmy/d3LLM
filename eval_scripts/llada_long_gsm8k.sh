@@ -100,7 +100,7 @@ num_fewshot=5
 steps=256
 accelerate launch --main_process_port 29601 eval_llada.py --tasks ${task} --num_fewshot ${num_fewshot} \
 --confirm_run_unsafe_code --model llada_dist \
---model_args model_path='d3LLM/d3LLM_LLaDA',gen_length=${length},steps=${steps},block_length=${block_length},show_speed=True,threshold=0.4,task="gsm8k",generation_method="generate_multi_block"
+--model_args model_path='d3LLM/d3LLM_LLaDA',gen_length=${length},steps=${steps},block_length=${block_length},show_speed=True,threshold=0.4,task="gsm8k",generation_method="generate_multi_block",early_stop=True
 
 
 # d3LLM-LLaDA: generate_multi_block_kv_cache, delay=2:
@@ -114,4 +114,4 @@ num_fewshot=5
 steps=256
 accelerate launch --main_process_port 29601 eval_llada.py --tasks ${task} --num_fewshot ${num_fewshot} \
 --confirm_run_unsafe_code --model llada_dist \
---model_args model_path='d3LLM/d3LLM_LLaDA',gen_length=${length},steps=${steps},block_length=${block_length},show_speed=True,threshold=0.4,task="gsm8k",generation_method="generate_multi_block_kv_cache",cache_delay_iter=2,refresh_interval=10000
+--model_args model_path='d3LLM/d3LLM_LLaDA',gen_length=${length},steps=${steps},block_length=${block_length},show_speed=True,threshold=0.4,task="gsm8k",generation_method="generate_multi_block_kv_cache",cache_delay_iter=2,refresh_interval=10000,early_stop=True

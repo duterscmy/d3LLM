@@ -17,7 +17,7 @@ We introduce a novel recipe for building an ultra-fast diffusion language model 
 
 ## ✨ Demo
 
-Demo of d3LLM: Achieve up to 5× speedup over autoregressive models (Qwen-2.5-7B-it) on H100 GPU and 3.5× speedup on A100 GPU. **You can try 🕹️ [our demo](https://d3llm-team.github.io/).**
+Demo of d3LLM: Achieve up to 5× speedup over autoregressive models (Qwen-2.5-7B-it) on H100 GPU and 3.6× speedup on A100 GPU. **You can try 🕹️ [our demo](https://d3llm-team.github.io/).**
 
 <div align="center">
 
@@ -162,7 +162,7 @@ Our d3LLM achieves the highest AUP ([_Accuracy Under Parallelism_](https://hao-a
 | Model | H100's TPS | A100's TPS | Speedup vs. AR |
 |-------|:----------:|:----------:|:---------------:|
 | Qwen-2.5-7B (AR) | 57.32 | 50.36 | 1.00× |
-| d3LLM-LLaDA | **288.73** | **174.57** | **3.47×~5.04×** |
+| d3LLM-LLaDA | **288.89** | **183.33** | **3.47×~5.04×** |
 | d3LLM-Dream | **235.34** | **128.19** | **2.55×~4.67×** |
 
 </div>

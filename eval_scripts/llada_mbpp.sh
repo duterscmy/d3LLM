@@ -156,7 +156,7 @@ output_dir='d3llm'
 METHOD_NAME_ENCODED=$(echo "${model_path}" | sed 's|/|__|g')
 accelerate launch --main_process_port 29601 eval_llada.py --tasks ${task} --num_fewshot ${num_fewshot} \
 --confirm_run_unsafe_code --model llada_dist \
---model_args model_path=${model_path},gen_length=${length},steps=${steps},block_length=${block_length},show_speed=True,threshold=0.4,task="${task}",generation_method="generate_multi_block",block_add_threshold=0.1,decoded_token_threshold=0.95,block_length=32 \
+--model_args model_path=${model_path},gen_length=${length},steps=${steps},block_length=${block_length},show_speed=True,threshold=0.4,task="${task}",generation_method="generate_multi_block",block_add_threshold=0.1,decoded_token_threshold=0.95,block_length=32,early_stop=True \
 --output_path evals_results/${output_dir}/${task}-multi-block-ns${num_fewshot}-${length} --log_samples
 latest_jsonl=$(find evals_results/${output_dir}/${task}-multi-block-ns${num_fewshot}-${length}/${METHOD_NAME_ENCODED} -name "samples_${task}_*.jsonl" -type f 2>/dev/null | head -n 1)
 [ -n "$latest_jsonl" ] && python postprocess_code_mbpp.py "$latest_jsonl" || echo "No jsonl file found"
@@ -176,7 +176,7 @@ output_dir='d3llm'
 METHOD_NAME_ENCODED=$(echo "${model_path}" | sed 's|/|__|g')
 accelerate launch --main_process_port 29601 eval_llada.py --tasks ${task} --num_fewshot ${num_fewshot} \
 --confirm_run_unsafe_code --model llada_dist \
---model_args model_path=${model_path},gen_length=${length},steps=${steps},block_length=${block_length},show_speed=True,threshold=0.4,task="${task}",generation_method="generate_multi_block_kv_cache",cache_delay_iter=1,refresh_interval=10000,block_add_threshold=0.1,decoded_token_threshold=0.95,block_length=32 \
+--model_args model_path=${model_path},gen_length=${length},steps=${steps},block_length=${block_length},show_speed=True,threshold=0.4,task="${task}",generation_method="generate_multi_block_kv_cache",cache_delay_iter=1,refresh_interval=10000,block_add_threshold=0.1,decoded_token_threshold=0.95,block_length=32,early_stop=True \
 --output_path evals_results/${output_dir}/${task}-multi-block-ns${num_fewshot}-${length} --log_samples
 latest_jsonl=$(find evals_results/${output_dir}/${task}-multi-block-ns${num_fewshot}-${length}/${METHOD_NAME_ENCODED} -name "samples_${task}_*.jsonl" -type f 2>/dev/null | head -n 1)
 [ -n "$latest_jsonl" ] && python postprocess_code_mbpp.py "$latest_jsonl" || echo "No jsonl file found"

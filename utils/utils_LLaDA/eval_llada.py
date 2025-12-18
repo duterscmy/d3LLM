@@ -97,6 +97,7 @@ class LLaDAEvalHarness(LM):
         cache_delay_iter=10000,
         refresh_interval=10000,
         temperature=0.0,
+        early_stop=False,
         **kwargs,
     ):
         '''
@@ -314,12 +315,14 @@ class LLaDAEvalHarness(LM):
         self.decoded_token_threshold = decoded_token_threshold
         self.cache_delay_iter = cache_delay_iter
         self.refresh_interval = refresh_interval
+        self.early_stop = early_stop
         # generation_method already validated and set before model creation
         print(f"Using generation method: {self.generation_method}")
         print(f"  temperature: {self.temperature}")
         if self.generation_method in ["generate_multi_block", "generate_multi_block_kv_cache"]:
             print(f"  block_add_threshold: {self.block_add_threshold}")
             print(f"  decoded_token_threshold: {self.decoded_token_threshold}")
+            print(f"  early_stop: {self.early_stop}")
         if self.generation_method == "generate_multi_block_kv_cache":
             print(f"  cache_delay_iter: {self.cache_delay_iter}")
     @property
@@ -669,7 +672,9 @@ class LLaDAEvalHarness(LM):
                     block_size=self.block_length, temperature=self.temperature, remasking=self.remasking, 
                     mask_id=self.mask_id, threshold=self.threshold,
                     block_add_threshold=self.block_add_threshold, 
-                    decoded_token_threshold=self.decoded_token_threshold
+                    decoded_token_threshold=self.decoded_token_threshold,
+                    eos_token_id=self.tokenizer.eos_token_id,
+                    early_stop=self.early_stop,
                 )
             elif self.generation_method == "generate_multi_block_kv_cache":
                 generated_answer, nfe = generate_multi_block_kv_cache(
@@ -679,7 +684,9 @@ class LLaDAEvalHarness(LM):
                     block_add_threshold=self.block_add_threshold, 
                     decoded_token_threshold=self.decoded_token_threshold,
                     cache_delay_iter=self.cache_delay_iter,
-                    refresh_interval=self.refresh_interval
+                    refresh_interval=self.refresh_interval,
+                    eos_token_id=self.tokenizer.eos_token_id,
+                    early_stop=self.early_stop,
                 )
             else:
                 raise ValueError(f"Unknown generation method: {self.generation_method}")

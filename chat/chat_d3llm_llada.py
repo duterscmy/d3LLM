@@ -40,6 +40,7 @@ gen_params = {
     "block_add_threshold": 0.1,
     "decoded_token_threshold": 0.95,
     "cache_delay_iter": 2,
+    "early_stop": True,
 }
 
 print("\n" + "="*80)

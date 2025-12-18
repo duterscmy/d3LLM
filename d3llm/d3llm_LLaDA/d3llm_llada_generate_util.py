@@ -67,6 +67,70 @@ def get_num_transfer_tokens(mask_index, steps):
     return num_transfer_tokens
 
 
+def handle_early_stop(x, block_states, eos_token_id, prompt_length, mask_token_id=None, debug=False):
+    """
+    Early stop: find first EOS, set all tokens after it to EOS (not mask), mark subsequent blocks as complete.
+    Returns: (has_eos, first_eos_abs_pos)
+    """
+    if eos_token_id is None:
+        return False, None
+    
+    # Only check non-mask tokens in generation region
+    gen_region = x[:, prompt_length:]
+    eos_mask = (gen_region == eos_token_id)
+    
+    if not eos_mask.any():
+        return False, None
+    
+    # Find first EOS position (only among decoded, non-mask tokens)
+    pos = torch.arange(gen_region.shape[1], device=x.device).unsqueeze(0)
+    first_eos_rel = torch.where(eos_mask, pos, gen_region.shape[1]).amin(dim=1)
+    first_eos_abs = prompt_length + first_eos_rel[0].item()
+    
+    if debug:
+        print(f"[EarlyStop] Found first EOS at position {first_eos_abs} (relative: {first_eos_rel[0].item()})")
+        # Count non-mask tokens before EOS
+        if mask_token_id is not None:
+            decoded_before_eos = ((x[:, prompt_length:first_eos_abs+1] != mask_token_id).sum().item())
+            print(f"[EarlyStop] Decoded tokens before (and including) EOS: {decoded_before_eos}")
+    
+    # Set all tokens after first EOS to EOS (NOT mask!)
+    x[:, first_eos_abs+1:] = eos_token_id
+    
+    # Update block states based on EOS position
+    blocks_marked = 0
+    blocks_updated = 0
+    for bid in sorted(block_states.keys()):
+        if bid > 0:
+            start, end = block_states[bid]["start"], block_states[bid]["end"]
+            
+            if start > first_eos_abs:
+                # Block entirely after EOS - mark as complete with no masks
+                if block_states[bid]["mask_count"] != 0:
+                    block_states[bid]["mask_count"] = 0
+                    block_states[bid]["is_complete"] = True
+                    blocks_marked += 1
+            elif end > first_eos_abs and start <= first_eos_abs:
+                # Block CONTAINS EOS - recalculate mask_count for portion before EOS
+                if mask_token_id is not None:
+                    # Only count masks from block start to EOS position (inclusive)
+                    masks_before_eos = (x[:, start:first_eos_abs+1] == mask_token_id).sum().item()
+                    old_count = block_states[bid]["mask_count"]
+                    if masks_before_eos != old_count:
+                        block_states[bid]["mask_count"] = masks_before_eos
+                        blocks_updated += 1
+                        if masks_before_eos == 0:
+                            block_states[bid]["is_complete"] = True
+    
+    if debug:
+        if blocks_marked > 0:
+            print(f"[EarlyStop] Marked {blocks_marked} blocks after EOS as complete")
+        if blocks_updated > 0:
+            print(f"[EarlyStop] Updated {blocks_updated} blocks containing EOS")
+    
+    return True, first_eos_abs
+
+
 def get_transfer_index(
     logits, temperature, remasking, mask_index, x, num_transfer_tokens, threshold=None
 ):
@@ -112,7 +176,8 @@ def generate_multi_block(
     threshold=0.5,
     block_add_threshold=0.5,
     decoded_token_threshold=0.5,
-    eos_token_id=None,  # If provided, stop generation when EOS is encountered
+    eos_token_id=None,
+    early_stop=False,
 ):
     """
     Pipelined parallel decoding without cache.
@@ -125,6 +190,7 @@ def generate_multi_block(
         threshold: Entropy threshold for decoding (lower entropy = higher confidence). 
                    Tokens with entropy > threshold are skipped.
                    Same semantics as in generate() method. Typical value: 0.5
+        early_stop: If True, stop generation when EOS token is encountered.
     
     When block_add_threshold=1.0 and decoded_token_threshold=1.0, this method behaves 
     identically to generate() with sequential block processing.
@@ -133,6 +199,11 @@ def generate_multi_block(
         model.device
     )
     x[:, : prompt.shape[1]] = prompt.clone()
+    prompt_length = prompt.shape[1]
+    
+    # Only use eos_token_id if early_stop is enabled
+    if not early_stop:
+        eos_token_id = None
 
     # Track block states: {block_id: {start, end, mask_count, total_masks, is_complete}}
     # Initialize with prompt block
@@ -164,16 +235,39 @@ def generate_multi_block(
         next_block_id += 1
 
     nfe = 0
+    has_eos = False
     
     while True:
         # Check if all blocks are exhausted AND no more blocks to create
         mask_index = x == mask_id
-        total_masks = mask_index[:, prompt.shape[1] :].sum()
+        total_masks = mask_index[:, prompt_length:].sum()
         
         if total_masks == 0 and next_block_id > num_blocks:
             break
         
         nfe += 1
+
+        # Early stop: handle EOS tokens
+        if early_stop and eos_token_id is not None:
+            has_eos, first_eos_abs = handle_early_stop(x, block_states, eos_token_id, prompt_length, 
+                                                        mask_token_id=mask_id, debug=False)
+            if has_eos:
+                # Create all missing blocks after EOS and mark them as complete
+                while next_block_id <= num_blocks:
+                    block_start = prompt_length + (next_block_id - 1) * block_size
+                    block_end = min(block_start + block_size, prompt_length + max_new_tokens)
+                    if block_start > first_eos_abs:
+                        block_states[next_block_id] = {
+                            "start": block_start, "end": block_end, "mask_count": 0,
+                            "total_masks": block_end - block_start, "is_complete": True,
+                        }
+                        next_block_id += 1
+                    else:
+                        break
+                # Recalculate total_masks
+                total_masks = (x == mask_id)[:, prompt_length:].sum()
+                if total_masks == 0:
+                    break
 
         # Update block completion states
         def update_block_activation_states():
@@ -190,8 +284,8 @@ def generate_multi_block(
         
         update_block_activation_states()
         
-        # Add new block dynamically based on last block's progress
-        if next_block_id <= num_blocks:
+        # Add new block dynamically based on last block's progress (skip if EOS detected)
+        if next_block_id <= num_blocks and not has_eos:
             last_bid = max(block_states.keys())
             if last_bid > 0:  # Not just prompt
                 last_progress = (
@@ -318,6 +412,7 @@ def generate_multi_block_kv_cache(
     refresh_interval=10000,
     lazy_cache_refresh_num=0,
     eos_token_id=None,
+    early_stop=False,
 ):
     """
     Pipelined parallel decoding with Delayed KV-Cache.
@@ -325,6 +420,9 @@ def generate_multi_block_kv_cache(
     Strategy: Wait cache_delay_iter steps after a block is fully decoded before caching it.
     This allows token representations to stabilize in the diffusion process.
     """
+    # Only use eos_token_id if early_stop is enabled
+    if not early_stop:
+        eos_token_id = None
     x = torch.full((1, prompt.shape[1] + max_new_tokens), mask_id, dtype=torch.long).to(
         model.device
     )
@@ -366,6 +464,7 @@ def generate_multi_block_kv_cache(
     past_key_values = None
     manual_cache_length = 0
     nfe = 0
+    has_eos = False
     
     def update_block_activation_states():
         """Update which blocks should be fully activated based on previous block progress."""
@@ -385,11 +484,34 @@ def generate_multi_block_kv_cache(
         
         nfe += 1
         
+        # Early stop: handle EOS tokens
+        if early_stop and eos_token_id is not None:
+            has_eos, first_eos_abs = handle_early_stop(x, block_states, eos_token_id, prompt_length,
+                                                        mask_token_id=mask_id, debug=False)
+            if has_eos:
+                # Create all missing blocks after EOS and mark them as complete
+                while next_block_id <= num_blocks:
+                    block_start = prompt_length + (next_block_id - 1) * block_size
+                    block_end = min(block_start + block_size, prompt_length + max_new_tokens)
+                    if block_start > first_eos_abs:
+                        block_states[next_block_id] = {
+                            "start": block_start, "end": block_end, "mask_count": 0,
+                            "total_masks": block_end - block_start, "is_complete": True,
+                            "completed_at_nfe": nfe, "is_cached": True,
+                        }
+                        next_block_id += 1
+                    else:
+                        break
+                # Recalculate total_masks
+                total_masks = (x == mask_id)[:, prompt_length:].sum()
+                if total_masks == 0:
+                    break
+        
         # Update block activation states
         update_block_activation_states()
         
-        # Add new block dynamically based on last block's progress
-        if next_block_id <= num_blocks:
+        # Add new block dynamically based on last block's progress (skip if EOS detected)
+        if next_block_id <= num_blocks and not has_eos:
             last_bid = max(block_states.keys())
             if last_bid > 0:
                 last_progress = 1 - block_states[last_bid]["mask_count"] / block_states[last_bid]["total_masks"]
