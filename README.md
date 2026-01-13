@@ -1,16 +1,18 @@
 # d3LLM: Ultra-Fast Diffusion LLM using Pseudo-Trajectory Distillation 🚀
 
+[![Paper](https://img.shields.io/badge/Paper-arXiv:2601.07568-orange)](https://arxiv.org/abs/2601.07568)
 [![Blog](https://img.shields.io/badge/Blog-text--diffusion-blue)](https://hao-ai-lab.github.io/blogs/text-diffusion/)
 [![Demo](https://img.shields.io/badge/Demo-d3LLM--Demo-purple)](https://d3llm-team.github.io/)
 [![d3LLM-Dream](https://img.shields.io/badge/🤗-d3LLM--Dream-yellow)](https://huggingface.co/d3LLM/d3LLM_Dream)
 [![d3LLM-LLaDA](https://img.shields.io/badge/🤗-d3LLM--LLaDA-yellow)](https://huggingface.co/d3LLM/d3LLM_LLaDA)
 [![d3LLM-Coder](https://img.shields.io/badge/🤗-d3LLM--Coder-yellow)](https://huggingface.co/d3LLM/d3LLM_Dream_Coder)
-[![Paper](https://img.shields.io/badge/Paper-arXiv:2601.07568-orange)](https://arxiv.org/abs/2601.07568)
+[![dLLM-Leaderboard](https://img.shields.io/badge/📊-dLLM--Leaderboard-blue)](https://huggingface.co/spaces/d3LLM/dLLM_Leaderboard)
 
 This is the official implementation of the paper [d3LLM: Ultra-Fast Diffusion LLM using Pseudo-Trajectory Distillation](https://arxiv.org/abs/2601.07568), where we introduce a novel recipe for building an ultra-fast diffusion language model named ***d3LLM*** (_pseuDo-Distilled Diffusion LLM_) 🚀.
 
 ## 📣 News
 - `[2026/01/12]`: We release the paper on 📄ArXiv! See our [paper](https://arxiv.org/abs/2601.07568).
+- `[2026/12/29]`: We release a Leaderboard📊 of diffusion LLMs, see our [dLLM Leaderboard](https://huggingface.co/spaces/d3LLM/dLLM_Leaderboard).
 - `[2025/12/11]`: We release the models on Huggingface 🤗, see our [d3LLM-LLaDA](https://huggingface.co/d3LLM/d3LLM_LLaDA), [d3LLM-Dream](https://huggingface.co/d3LLM/d3LLM_Dream), and [d3LLM-Dream-Coder](https://huggingface.co/d3LLM/d3LLM_Dream_Coder).
 - `[2025/12/11]`: We release the training scripts, training datasets, and evaluation code for d3LLM, see [our GitHub repo](https://github.com/hao-ai-lab/d3LLM).
 - `[2025/12/10]`: We release the 🌐 [blog](https://hao-ai-lab.github.io/blogs/text-diffusion/).
