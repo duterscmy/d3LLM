@@ -11,6 +11,7 @@
 This is the official implementation of the paper [d3LLM: Ultra-Fast Diffusion LLM using Pseudo-Trajectory Distillation](https://arxiv.org/abs/2601.07568), where we introduce a novel recipe for building an ultra-fast diffusion language model named ***d3LLM*** (_pseuDo-Distilled Diffusion LLM_) 🚀.
 
 ## 📣 News
+- `[2026/02/01]`: We have updated our d3LLM paper on 📄ArXiv. See our [updated paper](https://arxiv.org/abs/2601.07568).
 - `[2026/01/12]`: We release the paper on 📄ArXiv! See our [paper](https://arxiv.org/abs/2601.07568).
 - `[2026/12/29]`: We release a Leaderboard📊 of diffusion LLMs, see our [dLLM Leaderboard](https://huggingface.co/spaces/d3LLM/dLLM_Leaderboard).
 - `[2025/12/11]`: We release the models on Huggingface 🤗, see our [d3LLM-LLaDA](https://huggingface.co/d3LLM/d3LLM_LLaDA), [d3LLM-Dream](https://huggingface.co/d3LLM/d3LLM_Dream), and [d3LLM-Dream-Coder](https://huggingface.co/d3LLM/d3LLM_Dream_Coder).
