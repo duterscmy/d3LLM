@@ -346,7 +346,9 @@ def main(
         prompt = """{}
         This is an example for a response to the question:
         {}
-        Now answer with a response of your own, including the thinking process using this format `thinking #### answer`:"""
+        Now answer with a response of your own, including the thinking process
+        please using this format `thinking #### answer`
+        and dont repeat question:"""
 
         prompt_text = prompt.format(question, gt_cot)
         # Prepare messages for chat template
