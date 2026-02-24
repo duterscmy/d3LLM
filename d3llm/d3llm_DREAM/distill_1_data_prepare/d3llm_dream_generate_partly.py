@@ -55,6 +55,10 @@ def extract_boxed_answer(text):
     return None
 
 
+def extract_gsm8k_answer(text):
+    return text.split('####')[-1].strip()
+
+
 def normalize_answer(ans):
     """Normalize answer for comparison"""
     if ans is None:
@@ -315,8 +319,9 @@ def main(
     )
 
     # Load dataset
-    dataset = load_dataset("Zigeng/dParallel_Dream_Distill_Data", split="train")
+    # dataset = load_dataset("Zigeng/dParallel_Dream_Distill_Data", split="train")
     # dataset = load_dataset("d3LLM/Ling-Coder-dParallel-merged-512-120k", split="train")
+    dataset = load_dataset("openai/gsm8k", split="train")
 
     # Apply max_data_num limit
     if max_data_num > 0:
@@ -330,9 +335,18 @@ def main(
         range(start_idx, min(end_idx, len(dataset))), desc="Generating trajectories"
     ):
         sample = dataset[idx]
-        prompt_text = sample["question"]
-        ground_truth = sample.get("gt_answer", None)
+        # prompt_text = sample["question"]
+        # ground_truth = sample.get("gt_answer", None)
 
+        question = sample["question"]
+        gt_cot = sample.get("answer")
+        ground_truth = extract_gsm8k_answer(gt_cot)
+        prompt = """{question}
+        This is an example for a response to the question:
+        {gt_cot}
+        Now answer with a response of your own, including the thinking process:"""
+
+        prompt_text = prompt.format(question, gt_cot)
         # Prepare messages for chat template
         messages = [
             {"role": "user", "content": prompt_text}
@@ -369,7 +383,8 @@ def main(
 
             # Decode generated text and check correctness
             generated_text = tokenizer.decode(final_output[0], skip_special_tokens=True)
-            llm_answer = extract_boxed_answer(generated_text)
+            # llm_answer = extract_boxed_answer(generated_text)
+            llm_answer = extract_gsm8k_answer(generated_text)
             # is_correct = check_answer_correctness(generated_text, ground_truth)
             is_correct = True   # TODO: default to be True for now
             
