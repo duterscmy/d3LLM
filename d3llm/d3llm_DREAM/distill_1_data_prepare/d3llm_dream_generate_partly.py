@@ -339,14 +339,14 @@ def main(
         # ground_truth = sample.get("gt_answer", None)
 
         question = sample["question"]
-        print(question)
+        # print(question)
         gt_cot = sample.get("answer")
-        print(gt_cot)
+        # print(gt_cot)
         ground_truth = extract_gsm8k_answer(gt_cot)
         prompt = """{}
         This is an example for a response to the question:
         {}
-        Now answer with a response of your own, including the thinking process:"""
+        Now answer with a response of your own and end with #### the final answer:"""
 
         prompt_text = prompt.format(question, gt_cot)
         # Prepare messages for chat template
