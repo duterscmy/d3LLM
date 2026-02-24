@@ -341,6 +341,7 @@ def main(
         question = sample["question"]
         print(question)
         gt_cot = sample.get("answer")
+        print(gt_cot)
         ground_truth = extract_gsm8k_answer(gt_cot)
         prompt = """{}
         This is an example for a response to the question:
@@ -384,6 +385,8 @@ def main(
 
             # Decode generated text and check correctness
             generated_text = tokenizer.decode(final_output[0], skip_special_tokens=True)
+            print(generated_text)
+            print('========')
             # llm_answer = extract_boxed_answer(generated_text)
             llm_answer = extract_gsm8k_answer(generated_text)
             # is_correct = check_answer_correctness(generated_text, ground_truth)
