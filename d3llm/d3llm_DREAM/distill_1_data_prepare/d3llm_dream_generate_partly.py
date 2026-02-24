@@ -321,7 +321,7 @@ def main(
     # Load dataset
     # dataset = load_dataset("Zigeng/dParallel_Dream_Distill_Data", split="train")
     # dataset = load_dataset("d3LLM/Ling-Coder-dParallel-merged-512-120k", split="train")
-    dataset = load_dataset("openai/gsm8k", split="train")
+    dataset = load_dataset("openai/gsm8k", 'main', split="train")
 
     # Apply max_data_num limit
     if max_data_num > 0:
