@@ -339,11 +339,12 @@ def main(
         # ground_truth = sample.get("gt_answer", None)
 
         question = sample["question"]
+        print(question)
         gt_cot = sample.get("answer")
         ground_truth = extract_gsm8k_answer(gt_cot)
-        prompt = """{question}
+        prompt = """{}
         This is an example for a response to the question:
-        {gt_cot}
+        {}
         Now answer with a response of your own, including the thinking process:"""
 
         prompt_text = prompt.format(question, gt_cot)
