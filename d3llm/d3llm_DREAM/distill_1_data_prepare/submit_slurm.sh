@@ -58,7 +58,7 @@ echo "Partition: $SLURM_JOB_PARTITION"
 echo "Processing indices: $start_idx to $end_idx"
 
 # 运行 Python 脚本
-python d3llm/d3llm_DREAM/distill_1_data_prepare/d3llm_dream_generate_partly.py \
+python d3llm_dream_generate_partly.py \
     --start_idx $start_idx \
     --end_idx $end_idx \
     --steps 256 \
