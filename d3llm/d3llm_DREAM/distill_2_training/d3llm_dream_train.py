@@ -787,18 +787,21 @@ def main():
             for question, response in zip(example["question"], example["generated_text"]):
                 # prompt text
                 real_question = question.split('\n')[0]
+                real_response = response.split('dont repeat question:<|im_end|>\n<|im_start|>assistant\n')[-1]
                 messages = [{"role": "user", "content": real_question}]
                 prompt_text = tokenizer.apply_chat_template(messages, add_generation_prompt=True, tokenize=False)
                 
                 # response text
-                answer_text = response + tokenizer.eos_token
+                answer_text = real_response + tokenizer.eos_token
                 
                 # complete text
                 full_text = prompt_text + answer_text
                 texts.append(full_text)
                 
                 if idx < 5:
-                    print(full_text)
+                    print(f"=========sample {idx}==========")
+                    print(real_question)
+                    print(real_response)
                 idx += 1
 
                 # Calculate the number of tokens in the prompt part
