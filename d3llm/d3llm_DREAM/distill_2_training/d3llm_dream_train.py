@@ -423,7 +423,7 @@ class DLMTrainer(Trainer):
         prompt_lengths = inputs["prompt_lengths"]
         sample_indices = inputs["sample_idx"]
         
-        # Dynamically load trajectories from trajectory_dataset based on sample_idx
+        # 1. 加载 Trajectories
         trajectories = []
         for idx in sample_indices.cpu().tolist():
             if self.trajectory_dataset is not None and idx < len(self.trajectory_dataset):
@@ -432,12 +432,12 @@ class DLMTrainer(Trainer):
                 traj = []
             trajectories.append(traj)
         
-        # Get current mask ratio and block size
+        # 2. 获取当前 Mask 策略
         current_mask_ratio = self.get_current_mask_ratio()
         current_mask_ratio = random.uniform(current_mask_ratio, self.max_mask_ratio)
         current_block_size = self.get_current_block_size()
         
-        # Forward masking with trajectories
+        # 3. 生成 Mask (Forward Process)
         if self.use_complementary_loss:
             noisy_batch, noisy_batch_rev, masked_indices, masked_indices_rev = forward_process_with_trajectory(
                 input_ids, prompt_lengths, trajectories,
@@ -454,100 +454,69 @@ class DLMTrainer(Trainer):
                 use_naive_random_mask=self.use_naive_random_mask,
             )
         
-        # token shift
-        masked_indices = masked_indices[:, 1:]
-        masked_indices_rev = masked_indices_rev[:, 1:] if self.use_complementary_loss else None
-        
-        # compute logits
+        # 4. 前向传播
         outputs = model(input_ids=noisy_batch)
-        logits = outputs.logits[:, :-1].float()  # Convert to FP32 for numerical stability
-        graph_preserver = logits.sum() * 0.0
+        logits = outputs.logits[:, :-1].float()
+        
+        # 【关键：定义梯度锚点】
+        graph_safe_zero = (logits * 0).sum()
 
-        # compute logits for complementary mask
         if self.use_complementary_loss:
             outputs_rev = model(input_ids=noisy_batch_rev)
-            logits_rev = outputs_rev.logits[:, :-1].float()  # Convert to FP32 for numerical stability
+            logits_rev = outputs_rev.logits[:, :-1].float()
+            # 同时也锚定反向路径的梯度
+            graph_safe_zero = graph_safe_zero + (logits_rev * 0).sum()
         
-        input_ids = input_ids[:, 1:]
-        # Calculate loss: only calculate loss for masked tokens
-        if masked_indices.sum() > 0:
-            # Get the logits and labels of the masked positions
-            masked_logits = logits[masked_indices]  # [num_masked, vocab_size]
-            masked_labels = input_ids[masked_indices]  # [num_masked]
-            
-            # cross entropy loss with automatic mean reduction
-            ce_loss = F.cross_entropy(masked_logits, masked_labels)
+        # 准备 Label 和 Mask
+        input_ids_shifted = input_ids[:, 1:]
+        masked_indices_shifted = masked_indices[:, 1:]
+        
+        # 5. 计算主路径 CE Loss
+        if masked_indices_shifted.any():
+            ce_loss = F.cross_entropy(logits[masked_indices_shifted], input_ids_shifted[masked_indices_shifted])
         else:
-            ce_loss = graph_preserver
-        
-        # Calculate loss: only calculate loss for masked tokens
-        if self.use_complementary_loss and masked_indices_rev.sum() > 0:
-            # Get the logits and labels of the masked positions
-            masked_logits_rev = logits_rev[masked_indices_rev]  # [num_masked, vocab_size]
-            masked_labels_rev = input_ids[masked_indices_rev]  # [num_masked]
-            
-            # cross entropy loss with automatic mean reduction
-            ce_loss_rev = F.cross_entropy(masked_logits_rev, masked_labels_rev)
-        else:
-            ce_loss_rev = graph_preserver
-        
-        # ---------- Apply entropy loss only to "correctly predicted" tokens ----------
-        if masked_indices.sum() > 0:
-            # Calculate the probability and entropy of each position
-            # Note: argmax is not affected by temperature; logits/probs are equivalent.
-            probs = F.softmax(logits / self.temperature, dim=-1)  # [B, T, V]
-            H_tok = -(probs * torch.log(probs + 1e-12)).sum(dim=-1)  # [B, T]
-            
-            # predictions
-            pred_ids = logits.argmax(dim=-1)  # [B, T]
-            
-            # Only keep: positions that are masked and predicted == label
-            correct_mask = (pred_ids == input_ids) & masked_indices  # [B, T] bool
-            
+            ce_loss = graph_safe_zero
+
+        # 6. 计算互补路径 CE Loss
+        ce_loss_rev = graph_safe_zero
+        if self.use_complementary_loss:
+            masked_indices_rev_shifted = masked_indices_rev[:, 1:]
+            if masked_indices_rev_shifted.any():
+                ce_loss_rev = F.cross_entropy(logits_rev[masked_indices_rev_shifted], input_ids_shifted[masked_indices_rev_shifted])
+
+        # 7. 计算主路径 Entropy Loss
+        entropy_loss = graph_safe_zero
+        if masked_indices_shifted.any():
+            probs = F.softmax(logits / self.temperature, dim=-1)
+            H_tok = -(probs * torch.log(probs + 1e-12)).sum(dim=-1)
+            pred_ids = logits.argmax(dim=-1)
+            correct_mask = (pred_ids == input_ids_shifted) & masked_indices_shifted
             num_correct = correct_mask.sum()
-            if num_correct.item() > 0:
-                # Minimize entropy only for the "correctly predicted" positions
+            if num_correct > 0:
                 entropy_loss = (H_tok * correct_mask).sum() / num_correct.clamp_min(1)
-            else:
-                entropy_loss = 0.0 * logits.sum()
-        else:
-            entropy_loss = graph_preserver
-        
-        # ---------- Apply entropy loss only to "correctly predicted" tokens ----------
-        if self.use_complementary_loss and masked_indices_rev.sum() > 0:
-            # Calculate the probability and entropy of each position
-            # Note: argmax is not affected by temperature; logits/probs are equivalent.
-            probs_rev = F.softmax(logits_rev / self.temperature, dim=-1)  # [B, T, V]
-            H_tok_rev = -(probs_rev * torch.log(probs_rev + 1e-12)).sum(dim=-1)  # [B, T]
-            
-            # predictions
-            pred_ids_rev = logits_rev.argmax(dim=-1)  # [B, T]
-            
-            # Only keep: positions that are masked and predicted == label
-            correct_mask_rev = (pred_ids_rev == input_ids) & masked_indices_rev  # [B, T] bool
-            
-            num_correct_rev = correct_mask_rev.sum()
-            if num_correct_rev.item() > 0:
-                # Minimize entropy only for the "correctly predicted" positions
-                entropy_loss_rev = (H_tok_rev * correct_mask_rev).sum() / num_correct_rev.clamp_min(1)
-            else:
-                entropy_loss_rev = 0.0 * logits_rev.sum()
-        else:
-            entropy_loss_rev = graph_preserver
-        
-        # ==================== combined total loss ====================
+
+        # 8. 计算互补路径 Entropy Loss
+        entropy_loss_rev = graph_safe_zero
+        if self.use_complementary_loss:
+            masked_indices_rev_shifted = masked_indices_rev[:, 1:]
+            if masked_indices_rev_shifted.any():
+                probs_rev = F.softmax(logits_rev / self.temperature, dim=-1)
+                H_tok_rev = -(probs_rev * torch.log(probs_rev + 1e-12)).sum(dim=-1)
+                pred_ids_rev = logits_rev.argmax(dim=-1)
+                correct_mask_rev = (pred_ids_rev == input_ids_shifted) & masked_indices_rev_shifted
+                num_correct_rev = correct_mask_rev.sum()
+                if num_correct_rev > 0:
+                    entropy_loss_rev = (H_tok_rev * correct_mask_rev).sum() / num_correct_rev.clamp_min(1)
+
+        # 9. 合并 Loss
         if self.use_complementary_loss:
             total_loss = (ce_loss + ce_loss_rev + self.entropy_weight * (entropy_loss + entropy_loss_rev)) / 4.0
         else:
-            total_loss = (ce_loss + self.entropy_weight * entropy_loss) / 4.0
+            total_loss = (ce_loss + self.entropy_weight * entropy_loss)
 
-        total_loss = total_loss + graph_preserver
-
-        # 在 compute_loss 结尾，确保即使没有 masked tokens，loss 也带梯度信息
-        if total_loss == 0 or not isinstance(total_loss, torch.Tensor):
-            # 创造一个极小的带梯度的 0，维持计算图完整
-            total_loss = graph_preserver 
-
+        # 10. 最终加固：确保 loss 携带所有 logits 的梯度信息且绝不为 None/0
+        total_loss = total_loss + graph_safe_zero
+        
         return (total_loss, outputs) if return_outputs else total_loss
         
 
