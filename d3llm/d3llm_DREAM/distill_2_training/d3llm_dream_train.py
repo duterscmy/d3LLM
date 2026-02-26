@@ -759,6 +759,7 @@ def main():
     cache_key = hashlib.md5(cache_key_str).hexdigest()
     cache_file_tokenized = os.path.join(cache_dir, f"tokenized_dataset_{cache_key}.pkl")
     
+    tokenized_dataset = None
     # Try to load tokenized dataset from cache
     # if os.path.exists(cache_file_tokenized):
     #     try:
@@ -799,7 +800,7 @@ def main():
                 if idx < 5:
                     print(full_text)
                 idx += 1
-                
+
                 # Calculate the number of tokens in the prompt part
                 prompt_token_ids = tokenizer(prompt_text, add_special_tokens=False)["input_ids"]
                 prompt_lengths.append(len(prompt_token_ids))
