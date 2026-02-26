@@ -907,7 +907,18 @@ def main():
         ] * (num_epochs - len(progressive_block_sizes))
     
     # 6. DLM Trainer
-    model.enable_input_require_grads()
+    # model.enable_input_require_grads()
+    for name, param in model.named_parameters():
+        if param.requires_grad:
+            # 暂时将参数设置为不参与梯度检查，看看是否能跳过报错
+            # 或者确保它真的被使用了
+            if param.is_leaf and param.device.type == 'cuda':
+                param.requires_grad = True 
+
+    # 核心：检查是否有参数被遗漏
+    from peft.utils import get_nb_trainable_parameters
+    print(model.get_nb_trainable_parameters())
+
     trainer = DLMTrainer(
         model=model,
         args=training_args,
