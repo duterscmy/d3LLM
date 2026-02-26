@@ -457,9 +457,15 @@ class DLMTrainer(Trainer):
         # 4. 前向传播
         outputs = model(input_ids=noisy_batch)
         logits = outputs.logits[:, :-1].float()
-        
-        # 【关键：定义梯度锚点】
+
         graph_safe_zero = (logits * 0).sum()
+
+        # 遍历所有可训练参数，强制将它们挂载到计算图中
+        # 这能确保 DeepSpeed 在 backward 时能看到所有它管理的参数
+        for name, param in model.named_parameters():
+            if param.requires_grad:
+                graph_safe_zero = graph_safe_zero + (param * 0).sum()
+
 
         if self.use_complementary_loss:
             outputs_rev = model(input_ids=noisy_batch_rev)
