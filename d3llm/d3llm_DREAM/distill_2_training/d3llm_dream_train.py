@@ -458,6 +458,7 @@ class DLMTrainer(Trainer):
         # compute logits
         outputs = model(input_ids=noisy_batch)
         logits = outputs.logits[:, :-1].float()  # Convert to FP32 for numerical stability
+        graph_preserver = logits.sum() * 0.0
 
         # compute logits for complementary mask
         if self.use_complementary_loss:
@@ -474,7 +475,7 @@ class DLMTrainer(Trainer):
             # cross entropy loss with automatic mean reduction
             ce_loss = F.cross_entropy(masked_logits, masked_labels)
         else:
-            ce_loss = 0.0 * logits.sum()
+            ce_loss = graph_preserver
         
         # Calculate loss: only calculate loss for masked tokens
         if self.use_complementary_loss and masked_indices_rev.sum() > 0:
@@ -485,7 +486,7 @@ class DLMTrainer(Trainer):
             # cross entropy loss with automatic mean reduction
             ce_loss_rev = F.cross_entropy(masked_logits_rev, masked_labels_rev)
         else:
-            ce_loss_rev = 0.0 * logits.sum() if self.use_complementary_loss else 0.0 * logits.sum()
+            ce_loss_rev = graph_preserver
         
         # ---------- Apply entropy loss only to "correctly predicted" tokens ----------
         if masked_indices.sum() > 0:
@@ -507,7 +508,7 @@ class DLMTrainer(Trainer):
             else:
                 entropy_loss = 0.0 * logits.sum()
         else:
-            entropy_loss = 0.0 * logits.sum()
+            entropy_loss = graph_preserver
         
         # ---------- Apply entropy loss only to "correctly predicted" tokens ----------
         if self.use_complementary_loss and masked_indices_rev.sum() > 0:
@@ -529,7 +530,7 @@ class DLMTrainer(Trainer):
             else:
                 entropy_loss_rev = 0.0 * logits_rev.sum()
         else:
-            entropy_loss_rev = 0.0 * logits.sum()
+            entropy_loss_rev = graph_preserver
         
         # ==================== combined total loss ====================
         if self.use_complementary_loss:
@@ -537,14 +538,15 @@ class DLMTrainer(Trainer):
         else:
             total_loss = (ce_loss + self.entropy_weight * entropy_loss) / 4.0
 
+        total_loss = total_loss + graph_preserver
+        
         # 在 compute_loss 结尾，确保即使没有 masked tokens，loss 也带梯度信息
         if total_loss == 0 or not isinstance(total_loss, torch.Tensor):
             # 创造一个极小的带梯度的 0，维持计算图完整
-            total_loss = (logits * 0).sum() 
+            total_loss = graph_preserver 
 
         return (total_loss, outputs) if return_outputs else total_loss
         
-        return (total_loss, outputs) if return_outputs else total_loss
 
 
 def main():
