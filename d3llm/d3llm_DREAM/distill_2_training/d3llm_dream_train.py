@@ -619,7 +619,7 @@ def main():
     training_args = TrainingArguments(
         **config["training"],
         deepspeed=get_deepspeed_config(config),
-        ddp_find_unused_parameters=True,
+        ddp_find_unused_parameters=False,
         label_names=["input_ids", "prompt_lengths", "sample_idx"],
     )
 
