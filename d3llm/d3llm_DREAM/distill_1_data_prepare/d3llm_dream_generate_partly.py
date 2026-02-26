@@ -343,11 +343,16 @@ def main(
         gt_cot = sample.get("answer")
         # print(gt_cot)
         ground_truth = extract_gsm8k_answer(gt_cot)
-        prompt = """{}
-        This is an example for a response to the question:
-        {}
-        Now answer with a response of your own, including the thinking process
-        please using this format `thinking #### answer`
+        # prompt = """{}
+        # This is an example for a response to the question:
+        # {}
+        # Now answer with a response of your own, including the thinking process
+        # please using this format `thinking #### answer`
+        # and dont repeat question:"""
+        
+        prompt = """Question:{}
+        This is an example for a response to the question: {}
+        Now answer with a response of your own, including the thinking process use this format `thinking process #### answer`
         and dont repeat question:"""
 
         prompt_text = prompt.format(question, gt_cot)
