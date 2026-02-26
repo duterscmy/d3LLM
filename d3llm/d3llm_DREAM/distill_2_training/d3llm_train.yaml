@@ -1,6 +1,6 @@
 # d3llm_train.yaml - DREAM distillation configuration
 model:
-    name: "Dream-org/Dream-v0-Instruct-7B"
+    name: "/mnt/fast/nobackup/scratch4weeks/mc03002/models/Dream-v0-Instruct-7B"
     trust_remote_code: true
     torch_dtype: "bfloat16"
 
