@@ -615,6 +615,11 @@ def main():
         ddp_find_unused_parameters=False,
         label_names=["input_ids", "prompt_lengths", "sample_idx"],
     )
+
+    # 在创建 training_args 后添加
+    print(f"DeepSpeed config: {training_args.deepspeed}")
+    print(f"Is DeepSpeed enabled: {training_args.deepspeed is not None}")
+    print(f"Distributed environment: {training_args.local_rank if hasattr(training_args, 'local_rank') else 'None'}")
     
     model, tokenizer = prepare_model(config)
     
@@ -720,8 +725,10 @@ def main():
         trajectory_dataset = None
     
     # 3. Load the original dataset
-    dataset = load_dataset("Zigeng/dParallel_Dream_Distill_Data", split="train")
-    
+    # dataset = load_dataset("Zigeng/dParallel_Dream_Distill_Data", split="train")
+    # dataset = load_dataset("openai/gsm8k", 'main', split="train")
+    dataset = trajectory_dataset
+
     # Limit dataset size for testing if max_samples is specified
     max_samples = distill_config.get("max_samples")
     if max_samples is not None and max_samples > 0:
@@ -753,21 +760,21 @@ def main():
     cache_file_tokenized = os.path.join(cache_dir, f"tokenized_dataset_{cache_key}.pkl")
     
     # Try to load tokenized dataset from cache
-    if os.path.exists(cache_file_tokenized):
-        try:
-            print(f"=" * 80)
-            print(f"Loading tokenized dataset from cache: {cache_file_tokenized}")
-            with open(cache_file_tokenized, 'rb') as f:
-                tokenized_dataset = pickle.load(f)
-            print(f"Successfully loaded tokenized dataset with {len(tokenized_dataset)} samples from cache!")
-            print(f"=" * 80)
-        except Exception as e:
-            print(f"Failed to load tokenized dataset cache: {e}")
-            print(f"Will tokenize from scratch...")
-            tokenized_dataset = None
-    else:
-        print(f"Tokenized dataset cache not found. Will tokenize from scratch...")
-        tokenized_dataset = None
+    # if os.path.exists(cache_file_tokenized):
+    #     try:
+    #         print(f"=" * 80)
+    #         print(f"Loading tokenized dataset from cache: {cache_file_tokenized}")
+    #         with open(cache_file_tokenized, 'rb') as f:
+    #             tokenized_dataset = pickle.load(f)
+    #         print(f"Successfully loaded tokenized dataset with {len(tokenized_dataset)} samples from cache!")
+    #         print(f"=" * 80)
+    #     except Exception as e:
+    #         print(f"Failed to load tokenized dataset cache: {e}")
+    #         print(f"Will tokenize from scratch...")
+    #         tokenized_dataset = None
+    # else:
+    #     print(f"Tokenized dataset cache not found. Will tokenize from scratch...")
+    #     tokenized_dataset = None
     
     # If cache doesn't exist or failed to load, perform tokenization
     if tokenized_dataset is None:
@@ -775,10 +782,11 @@ def main():
         def format_example(example):
             texts = []
             prompt_lengths = []
-            
+            idx = 0
             for question, response in zip(example["question"], example["llm_response"]):
                 # prompt text
-                messages = [{"role": "user", "content": question}]
+                real_question = question.split('\n')[0]
+                messages = [{"role": "user", "content": real_question}]
                 prompt_text = tokenizer.apply_chat_template(messages, add_generation_prompt=True, tokenize=False)
                 
                 # response text
@@ -787,6 +795,10 @@ def main():
                 # complete text
                 full_text = prompt_text + answer_text
                 texts.append(full_text)
+                
+                if idx < 5:
+                    print(full_text)
+                idx += 1
                 
                 # Calculate the number of tokens in the prompt part
                 prompt_token_ids = tokenizer(prompt_text, add_special_tokens=False)["input_ids"]
