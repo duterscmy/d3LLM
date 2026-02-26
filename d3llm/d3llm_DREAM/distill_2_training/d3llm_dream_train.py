@@ -907,6 +907,7 @@ def main():
         ] * (num_epochs - len(progressive_block_sizes))
     
     # 6. DLM Trainer
+    model.enable_input_require_grads()
     trainer = DLMTrainer(
         model=model,
         args=training_args,
