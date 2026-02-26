@@ -8,4 +8,4 @@ python d3llm/d3llm_DREAM/distill_1_data_prepare/d3llm_dream_generate_partly.py \
         --steps 256 \
         --gen_length 256 --block_length 32 \
         --output_file trajectory_data.json \
-        --max_data_num 10000
+        --max_data_num 100000
