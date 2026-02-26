@@ -784,7 +784,7 @@ def main():
             texts = []
             prompt_lengths = []
             idx = 0
-            for question, response in zip(example["question"], example["llm_response"]):
+            for question, response in zip(example["question"], example["tokenized_dataset"]):
                 # prompt text
                 real_question = question.split('\n')[0]
                 messages = [{"role": "user", "content": real_question}]
