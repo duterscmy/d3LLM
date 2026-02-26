@@ -17,6 +17,8 @@ import os
 import subprocess
 from ast import literal_eval
 
+import os
+os.environ["DS_BUILD_OPS"] = "0"
 
 def load_config(config_path: str) -> Dict[str, Any]:
     """Load YAML configuration file"""
