@@ -118,6 +118,9 @@ def prepare_model(config: Dict[str, Any]):
         )
         
         model = get_peft_model(model, lora_config)
+
+        model.enable_input_require_grads() 
+        model.config.use_cache = False
         
         # Print the number of trainable parameters
         model.print_trainable_parameters()
@@ -539,7 +542,7 @@ class DLMTrainer(Trainer):
             total_loss = (ce_loss + self.entropy_weight * entropy_loss) / 4.0
 
         total_loss = total_loss + graph_preserver
-        
+
         # 在 compute_loss 结尾，确保即使没有 masked tokens，loss 也带梯度信息
         if total_loss == 0 or not isinstance(total_loss, torch.Tensor):
             # 创造一个极小的带梯度的 0，维持计算图完整
