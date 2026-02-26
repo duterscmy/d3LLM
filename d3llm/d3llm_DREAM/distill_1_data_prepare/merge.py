@@ -79,12 +79,31 @@ def merge_trajectory_files(input_dir, output_path):
     print(f"Average NFE: {avg_nfe:.2f}")
     
     # Step 4: Save as dataset
+    # Step 4: Save as dataset - 分批处理避免OOM
     output_dir = Path(output_path)
     output_dir.parent.mkdir(parents=True, exist_ok=True)
-    
+
     try:
-        final_dataset = Dataset.from_dict(dataset_dict)
+        # 方法1：使用 Dataset.from_generator 分批创建
+        def gen_samples():
+            for sample in all_data:
+                yield {
+                    "idx": sample["idx"],
+                    "question": sample["question"],
+                    "prompt_ids": sample["prompt_ids"],
+                    "trajectory": sample["trajectory"],
+                    "final_output": sample["final_output"],
+                    "generated_text": sample["generated_text"],
+                    "llm_answer": sample["llm_answer"],
+                    "gt_answer": sample["gt_answer"],
+                    "is_correct": sample["is_correct"],
+                    "nfe": sample.get("nfe", 0),
+                }
+        
+        # 分批创建数据集
+        final_dataset = Dataset.from_generator(gen_samples)
         final_dataset.save_to_disk(str(output_dir))
+        
         print(f"\nSaved complete dataset with {len(all_data)} samples to {output_dir}")
         return True
     except Exception as e:
