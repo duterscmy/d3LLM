@@ -517,6 +517,7 @@ class DLMTrainer(Trainer):
         # 10. 最终加固：确保 loss 携带所有 logits 的梯度信息且绝不为 None/0
         total_loss = total_loss + graph_safe_zero
         
+        print(f"LOSS: {total_loss.item()}, GRAD_FN: {total_loss.grad_fn}")
         return (total_loss, outputs) if return_outputs else total_loss
         
 
