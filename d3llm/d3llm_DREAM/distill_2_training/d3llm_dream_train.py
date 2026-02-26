@@ -70,7 +70,7 @@ def get_deepspeed_config(config: Dict[str, Any]) -> Dict[str, Any]:
         "zero_allow_untested_optimizer": True,
         "bf16": {"enabled": "auto"},
         "zero_optimization": {
-            "stage": 3,
+            "stage": 1,
             # "offload_optimizer": {"device": "cpu", "pin_memory": True},
             "allgather_partitions": True,
             "allgather_bucket_size": 2e8,
@@ -118,10 +118,6 @@ def prepare_model(config: Dict[str, Any]):
         )
         
         model = get_peft_model(model, lora_config)
-
-        for name, param in model.named_parameters():
-            if "lora_" in name:
-                param.data = param.data.to(torch.bfloat16)
         
         # Print the number of trainable parameters
         model.print_trainable_parameters()
