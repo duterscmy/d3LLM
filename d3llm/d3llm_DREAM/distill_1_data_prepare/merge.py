@@ -78,15 +78,12 @@ def merge_trajectory_files(input_dir, output_path):
     print(f"\nCorrectness: {num_correct}/{total} = {accuracy:.2%}")
     print(f"Average NFE: {avg_nfe:.2f}")
     
-    # Step 4: Save as dataset
-    # Step 4: Save as dataset - 分批处理避免OOM
-    output_dir = Path(output_path)
-    output_dir.parent.mkdir(parents=True, exist_ok=True)
-
+    from tqdm import tqdm
     try:
         # 方法1：使用 Dataset.from_generator 分批创建
         def gen_samples():
-            for sample in all_data:
+            # 使用 tqdm 显示进度
+            for sample in tqdm(all_data, desc="Processing samples", unit="sample"):
                 yield {
                     "idx": sample["idx"],
                     "question": sample["question"],
@@ -100,14 +97,18 @@ def merge_trajectory_files(input_dir, output_path):
                     "nfe": sample.get("nfe", 0),
                 }
         
+        print("Creating dataset...")
         # 分批创建数据集
         final_dataset = Dataset.from_generator(gen_samples)
-        final_dataset.save_to_disk(str(output_dir))
         
-        print(f"\nSaved complete dataset with {len(all_data)} samples to {output_dir}")
+        print(f"Saving dataset to {output_path}...")
+        final_dataset.save_to_disk(str(output_path))
+        
+        print(f"\n✓ Saved complete dataset with {len(all_data)} samples to {output_path}")
         return True
+        
     except Exception as e:
-        print(f"Error saving dataset: {e}")
+        print(f"✗ Error saving dataset: {e}")
         return False
 
 
