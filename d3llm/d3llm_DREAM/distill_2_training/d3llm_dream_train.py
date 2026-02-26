@@ -914,10 +914,7 @@ def main():
             # 或者确保它真的被使用了
             if param.is_leaf and param.device.type == 'cuda':
                 param.requires_grad = True 
-
-    # 核心：检查是否有参数被遗漏
-    from peft.utils import get_nb_trainable_parameters
-    print(model.get_nb_trainable_parameters())
+    model.config.use_cache = False
 
     trainer = DLMTrainer(
         model=model,
