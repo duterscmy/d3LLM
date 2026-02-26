@@ -71,7 +71,7 @@ def get_deepspeed_config(config: Dict[str, Any]) -> Dict[str, Any]:
         "bf16": {"enabled": "auto"},
         "zero_optimization": {
             "stage": 2,
-            # "offload_optimizer": {"device": "cpu", "pin_memory": True},
+            "offload_optimizer": {"device": "cpu", "pin_memory": True},
             "allgather_partitions": True,
             "allgather_bucket_size": 2e8,
             "reduce_scatter": True,
