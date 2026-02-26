@@ -536,6 +536,13 @@ class DLMTrainer(Trainer):
             total_loss = (ce_loss + ce_loss_rev + self.entropy_weight * (entropy_loss + entropy_loss_rev)) / 4.0
         else:
             total_loss = (ce_loss + self.entropy_weight * entropy_loss) / 4.0
+
+        # 在 compute_loss 结尾，确保即使没有 masked tokens，loss 也带梯度信息
+        if total_loss == 0 or not isinstance(total_loss, torch.Tensor):
+            # 创造一个极小的带梯度的 0，维持计算图完整
+            total_loss = (logits * 0).sum() 
+
+        return (total_loss, outputs) if return_outputs else total_loss
         
         return (total_loss, outputs) if return_outputs else total_loss
 
