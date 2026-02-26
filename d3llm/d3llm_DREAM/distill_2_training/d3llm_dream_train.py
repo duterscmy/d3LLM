@@ -118,6 +118,10 @@ def prepare_model(config: Dict[str, Any]):
         )
         
         model = get_peft_model(model, lora_config)
+
+        for name, param in model.named_parameters():
+            if "lora_" in name:
+                param.data = param.data.to(torch.bfloat16)
         
         # Print the number of trainable parameters
         model.print_trainable_parameters()
