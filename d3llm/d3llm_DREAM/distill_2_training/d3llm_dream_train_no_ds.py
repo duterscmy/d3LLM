@@ -205,10 +205,10 @@ def forward_process_with_trajectory(
         seg_len = mask_end - mask_start
         if seg_len > 0:
             print(mask_start, mask_end)
-            print(traj_tensor.size())
             if traj_step is not None:
                 print("traj_step is not None")
                 traj_tensor = torch.tensor(traj_step, device=device, dtype=torch.long)
+                print(traj_tensor.size())
                 seg_mask = (traj_tensor[mask_start:mask_end] == mask_token_id)
             else:
                 print("traj_step is None")
