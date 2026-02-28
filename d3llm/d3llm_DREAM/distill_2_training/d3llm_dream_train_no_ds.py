@@ -204,6 +204,8 @@ def forward_process_with_trajectory(
         # Extract or generate seg_mask
         seg_len = mask_end - mask_start
         if seg_len > 0:
+            print(mask_start, mask_end)
+            print(traj_tensor.size())
             if traj_step is not None:
                 print("traj_step is not None")
                 traj_tensor = torch.tensor(traj_step, device=device, dtype=torch.long)
@@ -214,7 +216,6 @@ def forward_process_with_trajectory(
                 seg_mask = torch.rand(seg_len, device=device) < p_mask
             
             # Apply mask
-            print(mask_start, mask_end)
             print(seg_mask.size())
             masked_indices[i, mask_start:mask_end] = seg_mask
             if use_complementary_loss:
