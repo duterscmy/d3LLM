@@ -214,6 +214,7 @@ def forward_process_with_trajectory(
                 traj_tensor = torch.tensor(traj_step, device=device, dtype=torch.long)
                 print("traj_step.size(): {}".format(len(traj_step)))
                 mask_start_traject, mask_end_traject = mask_start - prompt_len, mask_end - prompt_len
+                print("mask_start_traject, mask_end_traject: {}, {}".format(mask_start_traject, mask_end_traject))
                 seg_mask = (traj_tensor[mask_start_traject:mask_end_traject] == mask_token_id)
             else:
                 p_mask = (1 - eps) * mask_ratio + eps
