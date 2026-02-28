@@ -170,7 +170,7 @@ def forward_process_with_trajectory(
     for i in range(b):
         prompt_len = prompt_lengths[i].item()
         response_len = l - prompt_len
-        
+        print("prompt len, response len: {} {}".format(prompt_len, response_len))
         if response_len <= 0:
             continue
         
