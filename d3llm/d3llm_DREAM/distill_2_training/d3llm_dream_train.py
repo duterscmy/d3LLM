@@ -1,6 +1,9 @@
 import sys
 import os
-
+import os
+os.environ["DS_BUILD_CPU_ADAM"] = "0"  # 禁用 CPU Adam
+os.environ["DS_BUILD_FUSED_ADAM"] = "0"
+os.environ["DS_BUILD_FUSED_LAMB"] = "0"
 sys.path.append("./distill_2_training")
 import torch
 import torch.nn.functional as F
