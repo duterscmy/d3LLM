@@ -126,8 +126,8 @@ def select_trajectory_by_ratio(trajectories, mask_ratio, mask_token_id, block_st
     target_idx = block_start + num_unmasked
     target_idx = min(target_idx, len(trajectories) - 1)
 
-    print("len(trajectories):{}".foramt(len(trajectories)))
-    print("len(trajectories[target_idx]):{}".foramt(len(trajectories[target_idx])))
+    print("len(trajectories):{}".format(len(trajectories)))
+    print("len(trajectories[target_idx]):{}".format(len(trajectories[target_idx])))
     
     return trajectories[target_idx]
 
@@ -153,11 +153,12 @@ def forward_process_with_trajectory(
     b, l = input_ids.shape
     device = input_ids.device
     
+    print("input ids size:{}".format(input_ids.size()))
     noisy_batch = input_ids.clone()
     noisy_batch_rev = input_ids.clone() if use_complementary_loss else None
     masked_indices = torch.zeros_like(input_ids, dtype=torch.bool)
     masked_indices_rev = torch.zeros_like(input_ids, dtype=torch.bool) if use_complementary_loss else None
-    
+    print("masked_indices size:{}".format(masked_indices.size()))
     # Protect prompt region from masking
     token_positions = torch.arange(l, device=device).expand(b, l)
     prompt_mask = token_positions < prompt_lengths.unsqueeze(1)
