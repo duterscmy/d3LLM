@@ -125,6 +125,9 @@ def select_trajectory_by_ratio(trajectories, mask_ratio, mask_token_id, block_st
     # index = block_start + number of unmasked tokens so far
     target_idx = block_start + num_unmasked
     target_idx = min(target_idx, len(trajectories) - 1)
+
+    print("len(trajectories):{}".foramt(len(trajectories)))
+    print("len(trajectories[target_idx]):{}".foramt(len(trajectories[target_idx])))
     
     return trajectories[target_idx]
 
@@ -176,7 +179,8 @@ def forward_process_with_trajectory(
             # 确保 max_blocks 至少为 0
             max_blocks = max(0, max_blocks)
             num_blocks = random.randint(0, max_blocks)
-            mask_start = prompt_len + num_blocks * block_size
+            # mask_start = prompt_len + num_blocks * block_size
+            mask_start = num_blocks * block_size
             # 确保 mask_end 不超过序列长度
             if num_blocks < max_blocks:
                 mask_end = mask_start + block_size
