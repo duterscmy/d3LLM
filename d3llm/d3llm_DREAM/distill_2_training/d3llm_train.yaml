@@ -1,12 +1,12 @@
 # d3llm_train.yaml - DREAM distillation configuration
 model:
-    name: "/mnt/fast/nobackup/scratch4weeks/mc03002/models/Dream-v0-Instruct-7B"
+    name: "/lus/lfs1aip2/projects/public/u6er/mingyu/models/Dream-v0-Instruct-7B"
     trust_remote_code: true
     torch_dtype: "bfloat16"
 
 training:
     output_dir: "output_model/d3LLM_DREAM_gsm8k"
-    num_train_epochs: 3
+    num_train_epochs: 5
     gradient_accumulation_steps: 4
     per_device_train_batch_size: 4
     logging_steps: 10
@@ -42,7 +42,7 @@ lora:
     task_type: "CAUSAL_LM"
 
 distillation:
-    trajectory_dataset_path: "/mnt/fast/nobackup/scratch4weeks/ly0008/mingyu/d3LLM/trajectory_data_dream_32_gsm8k"
+    trajectory_dataset_path: "/lus/lfs1aip2/projects/public/u6er/mingyu/d3LLM/trajectory_data_dream_32_gsm8k"
     max_length: 256 # Maximum sequence length for training
     max_samples: null # Maximum number of samples for training (null = use all data, set to e.g. 1000 for quick testing)
     use_blockwise_loss: true # If true: compute loss only on one block; if false: entire response
