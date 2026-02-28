@@ -180,8 +180,8 @@ def forward_process_with_trajectory(
             # 确保 max_blocks 至少为 0
             max_blocks = max(0, max_blocks)
             num_blocks = random.randint(0, max_blocks)
-            # mask_start = prompt_len + num_blocks * block_size
-            mask_start = num_blocks * block_size
+            mask_start = prompt_len + num_blocks * block_size
+            # mask_start = num_blocks * block_size
             # 确保 mask_end 不超过序列长度
             if num_blocks < max_blocks:
                 mask_end = mask_start + block_size
@@ -191,6 +191,7 @@ def forward_process_with_trajectory(
             mask_start = prompt_len
             mask_end = l
         
+        print("mask_start, mask_end: {}, {}".format(mask_start, mask_end))
         # 检查 mask region 是否有效
         if mask_start >= mask_end:
             # 如果没有有效区域，跳过这个样本的masking
@@ -209,14 +210,11 @@ def forward_process_with_trajectory(
         # Extract or generate seg_mask
         seg_len = mask_end - mask_start
         if seg_len > 0:
-            print(mask_start, mask_end)
             if traj_step is not None:
-                print("traj_step is not None")
                 traj_tensor = torch.tensor(traj_step, device=device, dtype=torch.long)
-                print(traj_tensor.size())
+                print("traj_step.size(): {}".format(traj_step.size()))
                 seg_mask = (traj_tensor[mask_start:mask_end] == mask_token_id)
             else:
-                print("traj_step is None")
                 p_mask = (1 - eps) * mask_ratio + eps
                 seg_mask = torch.rand(seg_len, device=device) < p_mask
             
