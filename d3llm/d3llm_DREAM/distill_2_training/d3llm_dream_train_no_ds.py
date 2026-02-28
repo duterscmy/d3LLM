@@ -173,12 +173,27 @@ def forward_process_with_trajectory(
         # Determine mask region
         if use_blockwise:
             max_blocks = response_len // block_size
+            # 确保 max_blocks 至少为 0
+            max_blocks = max(0, max_blocks)
             num_blocks = random.randint(0, max_blocks)
             mask_start = prompt_len + num_blocks * block_size
-            mask_end = mask_start + block_size if num_blocks < max_blocks else l
+            # 确保 mask_end 不超过序列长度
+            if num_blocks < max_blocks:
+                mask_end = mask_start + block_size
+            else:
+                mask_end = l
         else:
             mask_start = prompt_len
             mask_end = l
+        
+        # 检查 mask region 是否有效
+        if mask_start >= mask_end:
+            # 如果没有有效区域，跳过这个样本的masking
+            # 但仍然需要处理 future tokens
+            noisy_batch[i, prompt_len:l] = mask_token_id
+            if use_complementary_loss:
+                noisy_batch_rev[i, prompt_len:l] = mask_token_id
+            continue
         
         # Get trajectory or use random masking
         traj_fn = naive_random_mask if use_naive_random_mask else select_trajectory_by_ratio
@@ -188,30 +203,32 @@ def forward_process_with_trajectory(
         
         # Extract or generate seg_mask
         seg_len = mask_end - mask_start
-        if traj_step is not None:
-            traj_tensor = torch.tensor(traj_step, device=device, dtype=torch.long)
-            seg_mask = (traj_tensor[mask_start:mask_end] == mask_token_id)
-        else:
-            p_mask = (1 - eps) * mask_ratio + eps
-            seg_mask = torch.rand(seg_len, device=device) < p_mask
-        
-        # Apply mask
-        masked_indices[i, mask_start:mask_end] = seg_mask
-        if use_complementary_loss:
-            masked_indices_rev[i, mask_start:mask_end] = ~seg_mask
-        
-        noisy_batch[i, mask_start:mask_end] = torch.where(
-            masked_indices[i, mask_start:mask_end], mask_token_id, input_ids[i, mask_start:mask_end]
-        )
-        if use_complementary_loss:
-            noisy_batch_rev[i, mask_start:mask_end] = torch.where(
-                masked_indices_rev[i, mask_start:mask_end], mask_token_id, input_ids[i, mask_start:mask_end]
+        if seg_len > 0:
+            if traj_step is not None:
+                traj_tensor = torch.tensor(traj_step, device=device, dtype=torch.long)
+                seg_mask = (traj_tensor[mask_start:mask_end] == mask_token_id)
+            else:
+                p_mask = (1 - eps) * mask_ratio + eps
+                seg_mask = torch.rand(seg_len, device=device) < p_mask
+            
+            # Apply mask
+            masked_indices[i, mask_start:mask_end] = seg_mask
+            if use_complementary_loss:
+                masked_indices_rev[i, mask_start:mask_end] = ~seg_mask
+            
+            noisy_batch[i, mask_start:mask_end] = torch.where(
+                masked_indices[i, mask_start:mask_end], mask_token_id, input_ids[i, mask_start:mask_end]
             )
+            if use_complementary_loss:
+                noisy_batch_rev[i, mask_start:mask_end] = torch.where(
+                    masked_indices_rev[i, mask_start:mask_end], mask_token_id, input_ids[i, mask_start:mask_end]
+                )
         
-        # Mask future tokens
-        noisy_batch[i, mask_end:l] = mask_token_id
-        if use_complementary_loss:
-            noisy_batch_rev[i, mask_end:l] = mask_token_id
+        # Mask future tokens (always do this regardless of seg_len)
+        if mask_end < l:
+            noisy_batch[i, mask_end:l] = mask_token_id
+            if use_complementary_loss:
+                noisy_batch_rev[i, mask_end:l] = mask_token_id
 
     if use_complementary_loss:
         return noisy_batch, noisy_batch_rev, masked_indices, masked_indices_rev
