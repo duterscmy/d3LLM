@@ -174,7 +174,7 @@ def forward_process_with_trajectory(
         if response_len <= 0:
             continue
         
-        # Determine mask region
+        # Determine mask region随机一个block
         if use_blockwise:
             max_blocks = response_len // block_size
             # 确保 max_blocks 至少为 0
@@ -210,12 +210,14 @@ def forward_process_with_trajectory(
         # Extract or generate seg_mask
         seg_len = mask_end - mask_start
         if seg_len > 0:
-            if traj_step is not None:
+            if traj_step is not None:  # 就是一个trajectory, (256, )
                 traj_tensor = torch.tensor(traj_step, device=device, dtype=torch.long)
                 print("traj_step.size(): {}".format(len(traj_step)))
                 mask_start_traject, mask_end_traject = mask_start - prompt_len, mask_end - prompt_len
                 print("mask_start_traject, mask_end_traject: {}, {}".format(mask_start_traject, mask_end_traject))
+                # 用蒸馏出的trajectory确定当前step的mask
                 seg_mask = (traj_tensor[mask_start_traject:mask_end_traject] == mask_token_id)
+                print("seg_mask.size(): {}".format(seg_mask.size()))
             else:
                 p_mask = (1 - eps) * mask_ratio + eps
                 seg_mask = torch.rand(seg_len, device=device) < p_mask
@@ -539,25 +541,26 @@ def main():
         os.makedirs(cache_dir, exist_ok=True)
         
         # Generate cache key based on dataset path and max_length (important for preprocessing)
-        max_length = distill_config.get("max_length", 512)
+        max_length = distill_config.get("max_length", 512)  # 包含prompt和output
+        print("max_length: {}".format(max_length))
         cache_params = f"{trajectory_dataset_path}_maxlen{max_length}".encode()
         cache_key = hashlib.md5(cache_params).hexdigest()
         cache_file = os.path.join(cache_dir, f"trajectory_preprocessed_{cache_key}.pkl")
         
         # Try to load preprocessed trajectory dataset from cache first
-        if os.path.exists(cache_file):
-            try:
-                print(f"Loading preprocessed trajectory dataset from cache: {cache_file}")
-                with open(cache_file, 'rb') as f:
-                    trajectory_dataset = pickle.load(f)
-                print(f"Successfully loaded {len(trajectory_dataset)} preprocessed samples from cache!")
-            except Exception as e:
-                print(f"Failed to load cache: {e}")
-                print(f"Will process dataset from scratch...")
-                trajectory_dataset = None
-        else:
-            print(f"Preprocessed cache not found at {cache_file}. Processing from scratch...")
-            trajectory_dataset = None
+        # if os.path.exists(cache_file):
+        #     try:
+        #         print(f"Loading preprocessed trajectory dataset from cache: {cache_file}")
+        #         with open(cache_file, 'rb') as f:
+        #             trajectory_dataset = pickle.load(f)
+        #         print(f"Successfully loaded {len(trajectory_dataset)} preprocessed samples from cache!")
+        #     except Exception as e:
+        #         print(f"Failed to load cache: {e}")
+        #         print(f"Will process dataset from scratch...")
+        #         trajectory_dataset = None
+        # else:
+        #     print(f"Preprocessed cache not found at {cache_file}. Processing from scratch...")
+        #     trajectory_dataset = None
         
         # If cache doesn't exist or failed to load, process dataset
         if trajectory_dataset is None:
@@ -584,15 +587,17 @@ def main():
                 for traj in examples["trajectory"]:
                     if traj:
                         padded_traj = []
-                        for step in traj:
-                            if len(step) < max_length:
-                                # Pad with eos_token to max_length
-                                padding_length = max_length - len(step)
-                                padded_step = step + [pad_token_id] * padding_length
-                            else:
-                                # Truncate to max_length
-                                padded_step = step[:max_length]
-                            padded_traj.append(padded_step)
+                        # for step in traj:
+                        #     if len(step) < max_length:
+                        #         # Pad with eos_token to max_length
+                        #         padding_length = max_length - len(step)
+                        #         padded_step = step + [pad_token_id] * padding_length
+                        #     else:
+                        #         # Truncate to max_length
+                        #         padded_step = step[:max_length]
+                        #     padded_traj.append(padded_step)
+                        # processed_trajectories.append(padded_traj)
+                        padded_traj = traj[-256:]  # 256 is the generation length of teacher model
                         processed_trajectories.append(padded_traj)
                     else:
                         processed_trajectories.append([])
