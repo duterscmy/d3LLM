@@ -548,6 +548,7 @@ def main():
         cache_file = os.path.join(cache_dir, f"trajectory_preprocessed_{cache_key}.pkl")
         
         # Try to load preprocessed trajectory dataset from cache first
+        trajectory_dataset = None
         # if os.path.exists(cache_file):
         #     try:
         #         print(f"Loading preprocessed trajectory dataset from cache: {cache_file}")
