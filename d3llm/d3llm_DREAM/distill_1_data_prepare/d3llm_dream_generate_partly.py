@@ -348,15 +348,18 @@ def main(
         # please using this format `thinking #### answer`
         # and dont repeat question:"""
         
-        prompt = """Given a math problem and its step-by-step solution, your task is to:
-        1. Read and understand the given solution
-        2. Generate a DIFFERENT explanation in your own words
-        3. Make the reasoning more detailed and natural
+        prompt = """Given a math problem and its step-by-step solution, rewrite the solution in your own words with clear step-by-step reasoning.
 
-        Problem: {}
-        Original solution: {}
+IMPORTANT FORMAT REQUIREMENTS:
+- Your response must contain detailed thinking process
+- MUST end with "#### answer" followed by the final answer
+- DO NOT copy the original solution word-for-word
+- DO NOT repeat the question
 
-        Now write your own explanation (DO NOT copy the original):"""
+Problem: {}
+Original solution: {}
+
+Your rewritten explanation (must end with #### answer):"""
 
         prompt_text = prompt.format(question, gt_cot)
         # Prepare messages for chat template
