@@ -403,7 +403,9 @@ Your rewritten explanation (must end with #### answer):"""
             print('========')
             # llm_answer = extract_boxed_answer(generated_text)
             llm_answer = extract_gsm8k_answer(generated_text)
-            is_correct = check_answer_correctness(generated_text, ground_truth)
+            # is_correct = check_answer_correctness(generated_text, ground_truth)
+            print(f"gt: {ground_truth}; llm_answer: {llm_answer}")
+            is_correct = ground_truth == llm_answer
             # is_correct = True   # TODO: default to be True for now
             
             # If correct or this is the last attempt, break
