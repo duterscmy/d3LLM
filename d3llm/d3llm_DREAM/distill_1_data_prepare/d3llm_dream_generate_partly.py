@@ -418,17 +418,21 @@ Your rewritten explanation (must end with #### answer):"""
         results.append(
             {
                 "idx": idx,
-                "question": prompt_text,
+                "question": question,
                 "prompt_ids": prompt_ids,
                 "trajectory": [traj[0].cpu().tolist() for traj in trajectory],
                 "final_output": final_output[0].cpu().tolist(),
                 "generated_text": generated_text,
+                "llm_cot": generated_text.split("<|im_start|>assistant\n")[-1],
                 "llm_answer": llm_answer,
                 "gt_answer": ground_truth,
                 "is_correct": is_correct,
                 "nfe": nfe,
             }
         )
+
+        print(question)
+        print(generated_text.split("<|im_start|>assistant\n")[-1])
         
         # Update statistics and print real-time status
         total_count += 1
