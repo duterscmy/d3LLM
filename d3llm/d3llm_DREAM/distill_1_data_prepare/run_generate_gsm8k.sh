@@ -1,7 +1,7 @@
 
 
 start_idx=0
-end_idx=1000
+end_idx=30
 python d3llm/d3llm_DREAM/distill_1_data_prepare/d3llm_dream_generate_partly.py \
         --start_idx $start_idx \
         --end_idx $end_idx \

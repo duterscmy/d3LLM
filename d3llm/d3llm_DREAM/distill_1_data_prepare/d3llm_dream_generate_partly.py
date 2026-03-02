@@ -306,7 +306,7 @@ def main(
     device = "cuda"
 
     # Load DREAM teacher model
-    model_path = "Dream-org/Dream-v0-Instruct-7B"
+    model_path = "/lus/lfs1aip2/projects/public/u6er/mingyu/models/Dream-v0-Instruct-7B"
     # model_path = "Dream-org/Dream-Coder-v0-Instruct-7B"
     teacher_model = AutoModel.from_pretrained(
         model_path, 
@@ -339,9 +339,7 @@ def main(
         # ground_truth = sample.get("gt_answer", None)
 
         question = sample["question"]
-        # print(question)
         gt_cot = sample.get("answer")
-        # print(gt_cot)
         ground_truth = extract_gsm8k_answer(gt_cot)
         # prompt = """{}
         # This is an example for a response to the question:
@@ -350,10 +348,15 @@ def main(
         # please using this format `thinking #### answer`
         # and dont repeat question:"""
         
-        prompt = """Question:{}
-        This is an example for a response to the question: {}
-        Now answer with a response of your own, including the thinking process use this format `thinking process #### answer`
-        and dont repeat question:"""
+        prompt = """Given a math problem and its step-by-step solution, your task is to:
+        1. Read and understand the given solution
+        2. Generate a DIFFERENT explanation in your own words
+        3. Make the reasoning more detailed and natural
+
+        Problem: {}
+        Original solution: {}
+
+        Now write your own explanation (DO NOT copy the original):"""
 
         prompt_text = prompt.format(question, gt_cot)
         # Prepare messages for chat template
@@ -373,9 +376,10 @@ def main(
 
         # Retry mechanism: try up to 5 times if answer is incorrect
         # Temperature increases: 0.0, 0.1, 0.2, 0.3, 0.4
-        max_attempts = 5
+        max_attempts = 10
         for attempt in range(max_attempts):
             current_temperature = attempt * 0.1
+            current_temperature = min(0.5, current_temperature)
             
             # Generate trajectory
             final_output, trajectory, nfe = generate_teacher_model_trajectory(
@@ -396,8 +400,8 @@ def main(
             print('========')
             # llm_answer = extract_boxed_answer(generated_text)
             llm_answer = extract_gsm8k_answer(generated_text)
-            # is_correct = check_answer_correctness(generated_text, ground_truth)
-            is_correct = True   # TODO: default to be True for now
+            is_correct = check_answer_correctness(generated_text, ground_truth)
+            # is_correct = True   # TODO: default to be True for now
             
             # If correct or this is the last attempt, break
             if is_correct or attempt == max_attempts - 1:
