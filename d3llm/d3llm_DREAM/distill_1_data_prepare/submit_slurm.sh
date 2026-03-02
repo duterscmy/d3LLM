@@ -64,20 +64,20 @@ else
     exit 1
 fi
 EOF
-            job_submitted=true
-            break
-        else
-            echo "分区 $partition 不可用，尝试下一个..."
-        fi
-    done
+#             job_submitted=true
+#             break
+#         else
+#             echo "分区 $partition 不可用，尝试下一个..."
+#         fi
+#     done
     
-    if [ "$job_submitted" = false ]; then
-        echo "错误: 没有可用的分区 (a100, 3090) 来提交任务"
-        exit 1
-    fi
+#     if [ "$job_submitted" = false ]; then
+#         echo "错误: 没有可用的分区 (a100, 3090) 来提交任务"
+#         exit 1
+#     fi
     
-    sleep 1
-done
+#     sleep 1
+# done
 
 echo "所有任务提交完成！"
 echo "检查任务状态: squeue -u $USER"
