@@ -5,8 +5,7 @@ START=0
 END=9000
 STEP=1000
 SCRIPT_PATH="d3llm/d3llm_DREAM/distill_1_data_prepare/d3llm_dream_generate_partly.py"
-
-# PARTITIONS=("a100" "3090")
+PARTITION="a100"
 
 mkdir -p slurm_logs
 mkdir -p generated_data
@@ -22,16 +21,11 @@ for ((start_idx=$START; start_idx<$END; start_idx+=$STEP)); do
     
     echo "提交任务: 处理数据 [$start_idx, $end_idx) -> $output_file"
     
-    job_submitted=false
-    
-    # for partition in "${PARTITIONS[@]}"; do
-    #     if sinfo -p $partition 2>/dev/null | grep -q $partition; then
-    #         # 关键修改：移除了 EOF 的单引号，让变量可以传递
-    sbatch --partition=$partition \
+    sbatch --partition=$PARTITION \
             --job-name="dream_gen_${start_idx}_${end_idx}" \
             --output="slurm_logs/dream_gen_${start_idx}_${end_idx}_%j.out" \
             --error="slurm_logs/dream_gen_${start_idx}_${end_idx}_%j.err" \
-        << EOF
+    << EOF
 #!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
@@ -45,9 +39,8 @@ echo "Job started at: \$(date)"
 echo "Job ID: \$SLURM_JOB_ID"
 echo "Node: \$SLURM_NODENAME"
 echo "Partition: \$SLURM_JOB_PARTITION"
-echo "Processing indices: $start_idx to $end_idx"  # 这里会正确替换
+echo "Processing indices: $start_idx to $end_idx"
 
-# 运行 Python 脚本
 python $SCRIPT_PATH \\
     --start_idx $start_idx \\
     --end_idx $end_idx \\
@@ -64,20 +57,9 @@ else
     exit 1
 fi
 EOF
-#             job_submitted=true
-#             break
-#         else
-#             echo "分区 $partition 不可用，尝试下一个..."
-#         fi
-#     done
     
-#     if [ "$job_submitted" = false ]; then
-#         echo "错误: 没有可用的分区 (a100, 3090) 来提交任务"
-#         exit 1
-#     fi
-    
-#     sleep 1
-# done
+    sleep 1
+done
 
 echo "所有任务提交完成！"
 echo "检查任务状态: squeue -u $USER"
