@@ -6,7 +6,7 @@ END=9000
 STEP=1000
 SCRIPT_PATH="d3llm/d3llm_DREAM/distill_1_data_prepare/d3llm_dream_generate_partly.py"
 
-PARTITIONS=("a100" "3090")
+# PARTITIONS=("a100" "3090")
 
 mkdir -p slurm_logs
 mkdir -p generated_data
@@ -24,23 +24,21 @@ for ((start_idx=$START; start_idx<$END; start_idx+=$STEP)); do
     
     job_submitted=false
     
-    for partition in "${PARTITIONS[@]}"; do
-        if sinfo -p $partition 2>/dev/null | grep -q $partition; then
-            # 关键修改：移除了 EOF 的单引号，让变量可以传递
-            sbatch --partition=$partition \
-                   --job-name="dream_gen_${start_idx}_${end_idx}" \
-                   --output="slurm_logs/dream_gen_${start_idx}_${end_idx}_%j.out" \
-                   --error="slurm_logs/dream_gen_${start_idx}_${end_idx}_%j.err" \
-               << EOF
+    # for partition in "${PARTITIONS[@]}"; do
+    #     if sinfo -p $partition 2>/dev/null | grep -q $partition; then
+    #         # 关键修改：移除了 EOF 的单引号，让变量可以传递
+    sbatch --partition=$partition \
+            --job-name="dream_gen_${start_idx}_${end_idx}" \
+            --output="slurm_logs/dream_gen_${start_idx}_${end_idx}_%j.out" \
+            --error="slurm_logs/dream_gen_${start_idx}_${end_idx}_%j.err" \
+        << EOF
 #!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task=8
-#SBATCH --mem=20G
 #SBATCH --gpus=1
-#SBATCH --time=01-00:00:00
+#SBATCH --time=00-06:00:00
 
-source /mnt/fast/nobackup/users/mc03002/miniconda3/bin/activate
+source /home/u6er/cmy9797.u6er/miniconda3/bin/activate
 conda activate distill
 
 echo "Job started at: \$(date)"
