@@ -5,7 +5,6 @@ START=0
 END=9000
 STEP=1000
 SCRIPT_PATH="d3llm/d3llm_DREAM/distill_1_data_prepare/d3llm_dream_generate_partly.py"
-PARTITION="a100"
 
 mkdir -p slurm_logs
 mkdir -p generated_data
@@ -21,8 +20,7 @@ for ((start_idx=$START; start_idx<$END; start_idx+=$STEP)); do
     
     echo "提交任务: 处理数据 [$start_idx, $end_idx) -> $output_file"
     
-    sbatch --partition=$PARTITION \
-            --job-name="dream_gen_${start_idx}_${end_idx}" \
+    sbatch --job-name="dream_gen_${start_idx}_${end_idx}" \
             --output="slurm_logs/dream_gen_${start_idx}_${end_idx}_%j.out" \
             --error="slurm_logs/dream_gen_${start_idx}_${end_idx}_%j.err" \
     << EOF
