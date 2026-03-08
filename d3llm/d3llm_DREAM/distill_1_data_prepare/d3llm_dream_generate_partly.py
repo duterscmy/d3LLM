@@ -302,7 +302,7 @@ def main(
     device = "cuda"
 
     # Load DREAM teacher model
-    model_path = "/lus/lfs1aip2/projects/public/u6er/mingyu/models/Dream-v0-Instruct-7B"
+    model_path = "/mnt/fast/nobackup/scratch4weeks/mc03002/models/Dream-v0-Instruct-7B"
     # model_path = "Dream-org/Dream-Coder-v0-Instruct-7B"
     teacher_model = AutoModel.from_pretrained(
         model_path, 
