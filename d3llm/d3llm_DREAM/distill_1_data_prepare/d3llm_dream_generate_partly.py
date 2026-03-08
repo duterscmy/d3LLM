@@ -55,10 +55,6 @@ def extract_boxed_answer(text):
     return None
 
 
-def extract_gsm8k_answer(text):
-    return text.split('####')[-1].strip()
-
-
 def normalize_answer(ans):
     """Normalize answer for comparison"""
     if ans is None:
@@ -306,7 +302,7 @@ def main(
     device = "cuda"
 
     # Load DREAM teacher model
-    model_path = "/mnt/fast/nobackup/scratch4weeks/ly0008/mingyu/Dream-v0-Base-7B"
+    model_path = "/lus/lfs1aip2/projects/public/u6er/mingyu/models/Dream-v0-Instruct-7B"
     # model_path = "Dream-org/Dream-Coder-v0-Instruct-7B"
     teacher_model = AutoModel.from_pretrained(
         model_path, 
@@ -354,11 +350,11 @@ def main(
 
         # Retry mechanism: try up to 5 times if answer is incorrect
         # Temperature increases: 0.0, 0.1, 0.2, 0.3, 0.4
-        max_attempts = 10
+        max_attempts = 5
         for attempt in range(max_attempts):
             current_temperature = attempt * 0.1
-            current_temperature = min(0.5, current_temperature)
             
+            print("block {}, temper: {}".format(block_length, current_temperature))
             # Generate trajectory
             final_output, trajectory, nfe = generate_teacher_model_trajectory(
                 teacher_model,
@@ -386,7 +382,7 @@ def main(
 
         print(prompt_text)
         print(generated_text)
-        print("==========")
+        print("=============")
         # Store result: convert tensors to lists for JSON serialization
         results.append(
             {
@@ -402,7 +398,6 @@ def main(
                 "nfe": nfe,
             }
         )
-
         
         # Update statistics and print real-time status
         total_count += 1
