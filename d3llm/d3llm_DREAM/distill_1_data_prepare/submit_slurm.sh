@@ -26,9 +26,11 @@ for ((start_idx=$START; start_idx<$END; start_idx+=$STEP)); do
             --error="slurm_logs/dream_gen_${start_idx}_${end_idx}_%j.err" \
     << EOF
 #!/bin/bash
+SBATCH --job-name="distill_ar"
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=8
+#SBATCH --partition=a100
 #SBATCH --mem=30G
 #SBATCH --gpus=1
 #SBATCH --time=01-00:00:00
