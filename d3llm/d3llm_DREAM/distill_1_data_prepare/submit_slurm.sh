@@ -28,7 +28,7 @@ for ((start_idx=$START; start_idx<$END; start_idx+=$STEP)); do
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gpus=1
-#SBATCH --time=00-06:00:00
+#SBATCH --time=00-24:00:00
 
 source /home/u6er/cmy9797.u6er/miniconda3/bin/activate
 conda activate distill
@@ -44,7 +44,7 @@ python $SCRIPT_PATH \\
     --end_idx $end_idx \\
     --steps 256 \\
     --gen_length 256 \\
-    --block_length 32 \\
+    --block_length 1 \\
     --output_file $output_file \\
     --max_data_num 100000
 

@@ -319,9 +319,8 @@ def main(
     )
 
     # Load dataset
-    # dataset = load_dataset("Zigeng/dParallel_Dream_Distill_Data", split="train")
+    dataset = load_dataset("Zigeng/dParallel_Dream_Distill_Data", split="train")
     # dataset = load_dataset("d3LLM/Ling-Coder-dParallel-merged-512-120k", split="train")
-    dataset = load_dataset("openai/gsm8k", 'main', split="train")
 
     # Apply max_data_num limit
     if max_data_num > 0:
@@ -335,33 +334,9 @@ def main(
         range(start_idx, min(end_idx, len(dataset))), desc="Generating trajectories"
     ):
         sample = dataset[idx]
-        # prompt_text = sample["question"]
-        # ground_truth = sample.get("gt_answer", None)
+        prompt_text = sample["question"]
+        ground_truth = sample.get("gt_answer", None)
 
-        question = sample["question"]
-        gt_cot = sample.get("answer")
-        ground_truth = extract_gsm8k_answer(gt_cot)
-        # prompt_v1 = """{}
-        # This is an example for a response to the question:
-        # {}
-        # Now answer with a response of your own, including the thinking process
-        # please using this format `thinking #### answer`
-        # and dont repeat question:"""
-        
-        prompt = """Given a math problem and its step-by-step solution, rewrite the solution in your own words with clear step-by-step reasoning.
-
-IMPORTANT FORMAT REQUIREMENTS:
-- Your response must contain detailed thinking process
-- MUST end with "#### answer" followed by the final answer
-- DO NOT copy the original solution word-for-word
-- DO NOT repeat the question
-
-Problem: {}
-Original solution: {}
-
-Your rewritten explanation (must end with #### answer):"""
-
-        prompt_text = prompt.format(question, gt_cot)
         # Prepare messages for chat template
         messages = [
             {"role": "user", "content": prompt_text}
@@ -399,12 +374,9 @@ Your rewritten explanation (must end with #### answer):"""
 
             # Decode generated text and check correctness
             generated_text = tokenizer.decode(final_output[0], skip_special_tokens=True)
-            # llm_answer = extract_boxed_answer(generated_text)
-            llm_answer = extract_gsm8k_answer(generated_text)
+            llm_answer = extract_boxed_answer(generated_text)
             # is_correct = check_answer_correctness(generated_text, ground_truth)
-            print(f"gt: {ground_truth}; llm_answer: {llm_answer}")
-            is_correct = ground_truth == llm_answer
-            # is_correct = True   # TODO: default to be True for now
+            is_correct = True   # TODO: default to be True for now
             
             # If correct or this is the last attempt, break
             if is_correct or attempt == max_attempts - 1:
@@ -416,12 +388,11 @@ Your rewritten explanation (must end with #### answer):"""
         results.append(
             {
                 "idx": idx,
-                "question": question,
+                "question": prompt_text,
                 "prompt_ids": prompt_ids,
                 "trajectory": [traj[0].cpu().tolist() for traj in trajectory],
                 "final_output": final_output[0].cpu().tolist(),
                 "generated_text": generated_text,
-                "llm_cot": generated_text.split("<|im_start|>assistant\n")[-1],
                 "llm_answer": llm_answer,
                 "gt_answer": ground_truth,
                 "is_correct": is_correct,
@@ -429,8 +400,6 @@ Your rewritten explanation (must end with #### answer):"""
             }
         )
 
-        print(question)
-        print(generated_text.split("<|im_start|>assistant\n")[-1])
         
         # Update statistics and print real-time status
         total_count += 1
