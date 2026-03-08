@@ -2,8 +2,9 @@
 
 # 配置参数
 START=0
-END=9000
-STEP=1000
+# END=122000
+END=30000
+STEP=3000
 SCRIPT_PATH="d3llm/d3llm_DREAM/distill_1_data_prepare/d3llm_dream_generate_partly.py"
 
 mkdir -p slurm_logs
@@ -27,10 +28,12 @@ for ((start_idx=$START; start_idx<$END; start_idx+=$STEP)); do
 #!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=30G
 #SBATCH --gpus=1
-#SBATCH --time=00-24:00:00
+#SBATCH --time=01-00:00:00
 
-source /home/u6er/cmy9797.u6er/miniconda3/bin/activate
+source /mnt/fast/nobackup/users/mc03002/miniconda3/bin/activate
 conda activate distill
 
 echo "Job started at: \$(date)"
@@ -42,8 +45,8 @@ echo "Processing indices: $start_idx to $end_idx"
 python $SCRIPT_PATH \\
     --start_idx $start_idx \\
     --end_idx $end_idx \\
-    --steps 256 \\
-    --gen_length 256 \\
+    --steps 512 \\
+    --gen_length 512 \\
     --block_length 1 \\
     --output_file $output_file \\
     --max_data_num 100000
