@@ -306,7 +306,7 @@ def main(
     device = "cuda"
 
     # Load DREAM teacher model
-    model_path = "/lus/lfs1aip2/projects/public/u6er/mingyu/models/Dream-v0-Instruct-7B"
+    model_path = "/mnt/fast/nobackup/scratch4weeks/ly0008/mingyu/Dream-v0-Base-7B"
     # model_path = "Dream-org/Dream-Coder-v0-Instruct-7B"
     teacher_model = AutoModel.from_pretrained(
         model_path, 
@@ -384,6 +384,9 @@ def main(
             
             print(f"Attempt {attempt + 1}/{max_attempts} failed for idx {idx} (temperature={current_temperature:.1f}), retrying...", flush=True)
 
+        print(prompt_text)
+        print(generated_text)
+        print("==========")
         # Store result: convert tensors to lists for JSON serialization
         results.append(
             {
