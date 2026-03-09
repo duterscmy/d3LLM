@@ -549,19 +549,19 @@ def main():
         
         # Try to load preprocessed trajectory dataset from cache first
         trajectory_dataset = None
-        # if os.path.exists(cache_file):
-        #     try:
-        #         print(f"Loading preprocessed trajectory dataset from cache: {cache_file}")
-        #         with open(cache_file, 'rb') as f:
-        #             trajectory_dataset = pickle.load(f)
-        #         print(f"Successfully loaded {len(trajectory_dataset)} preprocessed samples from cache!")
-        #     except Exception as e:
-        #         print(f"Failed to load cache: {e}")
-        #         print(f"Will process dataset from scratch...")
-        #         trajectory_dataset = None
-        # else:
-        #     print(f"Preprocessed cache not found at {cache_file}. Processing from scratch...")
-        #     trajectory_dataset = None
+        if os.path.exists(cache_file):
+            try:
+                print(f"Loading preprocessed trajectory dataset from cache: {cache_file}")
+                with open(cache_file, 'rb') as f:
+                    trajectory_dataset = pickle.load(f)
+                print(f"Successfully loaded {len(trajectory_dataset)} preprocessed samples from cache!")
+            except Exception as e:
+                print(f"Failed to load cache: {e}")
+                print(f"Will process dataset from scratch...")
+                trajectory_dataset = None
+        else:
+            print(f"Preprocessed cache not found at {cache_file}. Processing from scratch...")
+            trajectory_dataset = None
         
         # If cache doesn't exist or failed to load, process dataset
         if trajectory_dataset is None:
