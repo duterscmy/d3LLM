@@ -1,6 +1,6 @@
 # d3llm_train.yaml - DREAM distillation configuration
 model:
-    name: "/mnt/fast/nobackup/scratch4weeks/mc03002/models/Dream-v0-Instruct-7B"
+    name: "/lus/lfs1aip2/projects/public/u6er/mingyu/models/Dream-v0-Instruct-7B"
     trust_remote_code: true
     torch_dtype: "bfloat16"
 
@@ -42,7 +42,7 @@ lora:
     task_type: "CAUSAL_LM"
 
 distillation:
-    trajectory_dataset_path: "d3LLM/trajectory_data_dream_32"
+    trajectory_dataset_path: "/lus/lfs1aip2/projects/public/u6er/mingyu/d3LLM/trajectory_data_dream_32_gsm8k_new_prompt"
     max_length: 512 # Maximum sequence length for training
     max_samples: null # Maximum number of samples for training (null = use all data, set to e.g. 1000 for quick testing)
     use_blockwise_loss: true # If true: compute loss only on one block; if false: entire response
