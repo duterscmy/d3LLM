@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # 配置参数
-START=30000
+START=0
 # END=122000
-END=60000
-STEP=3000
+END=16000
+STEP=2000
 SCRIPT_PATH="d3llm/d3llm_DREAM/distill_1_data_prepare/d3llm_dream_generate_partly.py"
 
 mkdir -p slurm_logs
