@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # 配置参数
-START=48000
+START=64000
 # END=122000
-END=64000
+END=80000
 STEP=2000
 SCRIPT_PATH="d3llm/d3llm_DREAM/distill_1_data_prepare/d3llm_dream_generate_partly.py"
 
