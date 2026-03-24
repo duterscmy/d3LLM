@@ -1,53 +1,24 @@
 #!/usr/bin/env python3
 """
-Merge multiple trajectory JSON files with streaming to avoid OOM.
+真正的流式合并，使用ijson避免一次性加载JSON
 """
 
 import os
 import sys
 import json
+import ijson
 import argparse
 from pathlib import Path
 from datasets import Dataset, Features, Value, Sequence
 import gc
 import tempfile
 import shutil
-
-
-def process_file_streaming(file_path, dataset_writer):
-    """
-    流式处理单个JSON文件，逐条写入
-    """
-    with open(file_path, 'r', encoding='utf-8') as f:
-        # 使用流式JSON解析器
-        data = json.load(f)  # 这里还是会有问题
-        # 对于超大文件，需要使用ijson等流式解析器
-        
-        for sample in data:
-            # 逐条处理，不累积
-            processed_sample = {
-                "idx": sample["idx"],
-                "question": sample["question"],
-                "prompt_ids": sample["prompt_ids"],
-                "trajectory": sample["trajectory"],
-                "final_output": sample["final_output"],
-                "generated_text": sample["generated_text"],
-                "llm_answer": sample["llm_answer"],
-                "gt_answer": sample["gt_answer"],
-                "is_correct": sample["is_correct"],
-                "nfe": sample.get("nfe", 0),
-            }
-            dataset_writer.add_sample(processed_sample)
-            # 定期清理内存
-            if len(dataset_writer.buffer) >= 10000:
-                dataset_writer.flush()
+from tqdm import tqdm
 
 
 class StreamingDatasetWriter:
-    """
-    分批写入数据集，避免内存累积
-    """
-    def __init__(self, output_path, batch_size=10000):
+    """分批写入数据集"""
+    def __init__(self, output_path, batch_size=5000):
         self.output_path = Path(output_path)
         self.batch_size = batch_size
         self.buffer = []
@@ -64,29 +35,25 @@ class StreamingDatasetWriter:
         if not self.buffer:
             return
         
-        # 保存当前批次为临时文件
         batch_file = Path(self.temp_dir) / f"batch_{self.batch_count:05d}.arrow"
         batch_dataset = Dataset.from_list(self.buffer)
         batch_dataset.save_to_disk(str(batch_file))
         self.batch_files.append(batch_file)
         self.batch_count += 1
         
-        # 清空缓冲区并强制垃圾回收
         self.buffer.clear()
         gc.collect()
     
     def finalize(self):
-        """合并所有批次并保存最终数据集"""
+        """合并所有批次"""
         self.flush()
         
         if not self.batch_files:
             return
         
-        # 逐个加载批次并合并
         print("Merging batches...")
         final_dataset = None
-        for i, batch_file in enumerate(self.batch_files):
-            print(f"  Loading batch {i+1}/{len(self.batch_files)}...")
+        for i, batch_file in enumerate(tqdm(self.batch_files, desc="Merging")):
             batch_dataset = Dataset.load_from_disk(str(batch_file))
             
             if final_dataset is None:
@@ -94,21 +61,54 @@ class StreamingDatasetWriter:
             else:
                 final_dataset = final_dataset.concatenate([batch_dataset])
             
-            # 清理临时文件
             shutil.rmtree(batch_file)
             gc.collect()
         
-        # 保存最终数据集
         print(f"Saving final dataset to {self.output_path}...")
         final_dataset.save_to_disk(str(self.output_path))
-        
-        # 清理临时目录
         shutil.rmtree(self.temp_dir)
+        
+        return final_dataset
 
 
-def merge_trajectory_files_streaming(input_dir, output_path):
+def process_json_streaming(file_path, writer):
     """
-    流式合并所有JSON文件，避免内存溢出
+    流式处理单个JSON文件，使用ijson避免一次性加载
+    """
+    samples_processed = 0
+    
+    with open(file_path, 'rb') as f:
+        # 流式解析JSON数组中的每个元素
+        parser = ijson.items(f, 'item')
+        
+        for sample in tqdm(parser, desc=f"  Processing {file_path.name}", leave=False):
+            # 提取需要的字段
+            processed_sample = {
+                "idx": sample.get("idx"),
+                "question": sample.get("question"),
+                "prompt_ids": sample.get("prompt_ids"),
+                "trajectory": sample.get("trajectory"),
+                "final_output": sample.get("final_output"),
+                "generated_text": sample.get("generated_text"),
+                "llm_answer": sample.get("llm_answer"),
+                "gt_answer": sample.get("gt_answer"),
+                "is_correct": sample.get("is_correct", False),
+                "nfe": sample.get("nfe", 0),
+            }
+            
+            writer.add_sample(processed_sample)
+            samples_processed += 1
+            
+            # 定期强制垃圾回收
+            if samples_processed % 10000 == 0:
+                gc.collect()
+    
+    return samples_processed
+
+
+def merge_trajectory_files_streaming(input_dir, output_path, batch_size=5000):
+    """
+    流式合并所有JSON文件
     """
     input_path = Path(input_dir)
     
@@ -117,19 +117,21 @@ def merge_trajectory_files_streaming(input_dir, output_path):
         return False
     
     # 查找所有JSON文件
-    json_files = list(input_path.glob("trajectory_part_*.json"))
+    json_files = sorted(list(input_path.glob("trajectory_part_*.json")))
     if not json_files:
-        json_files = list(input_path.glob("*.json"))
+        json_files = sorted(list(input_path.glob("*.json")))
     
     if not json_files:
         print(f"No JSON files found in '{input_dir}'")
         return False
     
+    # 计算总大小
+    total_size_gb = sum(f.stat().st_size for f in json_files) / (1024**3)
     print(f"Found {len(json_files)} JSON files to merge:")
-    print(f"Total size estimate: {get_total_size(json_files):.2f} GB")
+    print(f"Total size estimate: {total_size_gb:.2f} GB")
     
-    # 创建流式写入器
-    writer = StreamingDatasetWriter(output_path, batch_size=5000)
+    # 创建写入器
+    writer = StreamingDatasetWriter(output_path, batch_size)
     
     # 统计信息
     total_samples = 0
@@ -137,54 +139,38 @@ def merge_trajectory_files_streaming(input_dir, output_path):
     total_nfe = 0
     
     # 逐个处理文件
-    from tqdm import tqdm
-    
     for json_file in tqdm(json_files, desc="Processing files"):
         try:
-            with open(json_file, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-                
-                if not isinstance(data, list):
-                    print(f"Warning: {json_file.name} is not a list, skipping")
-                    continue
-                
-                file_samples = len(data)
-                total_samples += file_samples
-                print(f"\nProcessing {json_file.name} ({file_samples} samples)...")
-                
-                # 逐条处理样本
-                for sample in tqdm(data, desc=f"  Processing {json_file.name}", leave=False):
-                    # 更新统计
-                    if sample.get("is_correct", False):
-                        correct_samples += 1
-                    total_nfe += sample.get("nfe", 0)
-                    
-                    # 写入到流式写入器
-                    writer.add_sample(sample)
-                
-                # 处理完一个文件后强制清理内存
-                data = None
-                gc.collect()
-                
+            print(f"\nProcessing {json_file.name}...")
+            
+            file_samples = process_json_streaming(json_file, writer)
+            total_samples += file_samples
+            
+            print(f"  Processed {file_samples} samples from {json_file.name}")
+            
+            # 强制垃圾回收
+            gc.collect()
+            
         except Exception as e:
             print(f"Error reading {json_file.name}: {e}")
+            import traceback
+            traceback.print_exc()
             return False
     
     # 最终合并并保存
     print(f"\nTotal samples processed: {total_samples}")
-    print(f"Correctness: {correct_samples}/{total_samples} = {correct_samples/total_samples*100:.2f}%")
-    print(f"Average NFE: {total_nfe/total_samples:.2f}")
     
-    writer.finalize()
+    final_dataset = writer.finalize()
+    
+    # 计算最终统计（可选）
+    if final_dataset is not None:
+        correct_count = sum(final_dataset["is_correct"])
+        avg_nfe = sum(final_dataset["nfe"]) / len(final_dataset)
+        print(f"Correctness: {correct_count}/{total_samples} = {correct_count/total_samples*100:.2f}%")
+        print(f"Average NFE: {avg_nfe:.2f}")
     
     print(f"\n✓ Saved dataset to {output_path}")
     return True
-
-
-def get_total_size(files):
-    """计算文件总大小(GB)"""
-    total_bytes = sum(f.stat().st_size for f in files)
-    return total_bytes / (1024**3)
 
 
 def main():
@@ -195,7 +181,7 @@ def main():
                         help="Batch size for processing (default: 5000)")
     args = parser.parse_args()
     
-    success = merge_trajectory_files_streaming(args.input_path, args.output_path)
+    success = merge_trajectory_files_streaming(args.input_path, args.output_path, args.batch_size)
     sys.exit(0 if success else 1)
 
 
